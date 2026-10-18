@@ -63,8 +63,22 @@ export interface Member {
   role: Role;
 }
 
+export interface Recipe {
+  id: string;
+  family_id: string;
+  title: string;
+  url: string | null;
+  image: string | null;
+  note: string | null;
+  servings_base: number | null;
+  items: Ingredient[];
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface Dish {
   id: string;
+  recipe_id: string | null;
   family_id: string;
   title: string;
   url: string | null;

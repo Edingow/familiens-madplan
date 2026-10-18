@@ -6,6 +6,9 @@ export const IconCart = () => (
 export const IconCalendar = () => (
   <svg viewBox="0 0 24 24" {...s}><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
 );
+export const IconBook = () => (
+  <svg viewBox="0 0 24 24" {...s}><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19M9 7h6M9 10.5h4" /></svg>
+);
 export const IconVote = () => (
   <svg viewBox="0 0 24 24" {...s}><path d="M7 11v9H4v-9zM7 11l4-7c1.5 0 2.5 1 2.2 2.6L12.6 10H19a1.8 1.8 0 0 1 1.8 2.1l-1.2 6.2A2 2 0 0 1 17.6 20H7" /></svg>
 );

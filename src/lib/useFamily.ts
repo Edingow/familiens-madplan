@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase";
-import type { Dish, Extra, Family, Member, Vote } from "./types";
+import type { Dish, Extra, Family, Member, Recipe, Vote } from "./types";
 
 export interface FamilyData {
   family: Family | null;
   me: Member | null;
   members: Member[];
   dishes: Dish[];
+  recipes: Recipe[];
   votes: Vote[];
   extras: Extra[];
   checks: Set<string>;
 }
 
-const EMPTY: FamilyData = { family: null, me: null, members: [], dishes: [], votes: [], extras: [], checks: new Set() };
-const CACHE = "madplan-cache-v1";
+const EMPTY: FamilyData = { family: null, me: null, members: [], dishes: [], recipes: [], votes: [], extras: [], checks: new Set() };
+const CACHE = "madplan-cache-v2";
 const QUEUE = "madplan-checks-queue-v1";
 
 type CheckOp = { key: string; on: boolean };
@@ -23,7 +24,7 @@ function loadCache(): FamilyData | null {
     const raw = localStorage.getItem(CACHE);
     if (!raw) return null;
     const d = JSON.parse(raw);
-    return { ...d, checks: new Set(d.checks || []) };
+    return { ...EMPTY, ...d, checks: new Set(d.checks || []) };
   } catch { return null; }
 }
 function saveCache(d: FamilyData) {
@@ -65,6 +66,10 @@ export function useFamily(userId: string | null) {
     const { data: dishes } = await supabase.from("dishes").select("*").in("status", ["voting", "planned"]).order("created_at");
     if (dishes) update({ dishes: dishes as Dish[] });
   }, [update]);
+  const loadRecipes = useCallback(async () => {
+    const { data: recipes } = await supabase.from("recipes").select("*").order("created_at", { ascending: false });
+    if (recipes) update({ recipes: recipes as Recipe[] });
+  }, [update]);
   const loadVotes = useCallback(async () => {
     const { data: votes } = await supabase.from("votes").select("*");
     if (votes) update({ votes: votes as Vote[] });
@@ -85,10 +90,10 @@ export function useFamily(userId: string | null) {
   const reloadAll = useCallback(async () => {
     try {
       const me = await loadMembership();
-      if (me) await Promise.all([loadDishes(), loadVotes(), loadExtras(), loadChecks()]);
+      if (me) await Promise.all([loadDishes(), loadRecipes(), loadVotes(), loadExtras(), loadChecks()]);
     } catch { /* uden net: vis det gemte */ }
     finally { setLoading(false); }
-  }, [loadMembership, loadDishes, loadVotes, loadExtras, loadChecks]);
+  }, [loadMembership, loadDishes, loadRecipes, loadVotes, loadExtras, loadChecks]);
 
   const flushQueue = useCallback(async () => {
     const q = loadQueue();
@@ -112,6 +117,7 @@ export function useFamily(userId: string | null) {
     const ch = supabase
       .channel("family")
       .on("postgres_changes", { event: "*", schema: "public", table: "dishes" }, () => debounce("d", loadDishes))
+      .on("postgres_changes", { event: "*", schema: "public", table: "recipes" }, () => debounce("r", loadRecipes))
       .on("postgres_changes", { event: "*", schema: "public", table: "votes" }, () => debounce("v", loadVotes))
       .on("postgres_changes", { event: "*", schema: "public", table: "extras" }, () => debounce("x", loadExtras))
       .on("postgres_changes", { event: "*", schema: "public", table: "checks" }, () => debounce("c", loadChecks))
@@ -131,7 +137,7 @@ export function useFamily(userId: string | null) {
       document.removeEventListener("visibilitychange", visible);
       Object.values(timers).forEach(clearTimeout);
     };
-  }, [userId, reloadAll, flushQueue, loadDishes, loadVotes, loadExtras, loadChecks, loadMembership]);
+  }, [userId, reloadAll, flushQueue, loadDishes, loadRecipes, loadVotes, loadExtras, loadChecks, loadMembership]);
 
   /** Flueben virker også uden net og sendes, når der er forbindelse igen. */
   const setChecked = useCallback(async (key: string, on: boolean) => {
@@ -144,7 +150,7 @@ export function useFamily(userId: string | null) {
     if (navigator.onLine) await flushQueue();
   }, [update, flushQueue]);
 
-  return { data, loading, offline, reloadAll, setChecked, loadDishes, loadExtras, loadVotes, loadMembership };
+  return { data, loading, offline, reloadAll, setChecked, loadDishes, loadRecipes, loadExtras, loadVotes, loadMembership };
 }
 
 export function clearLocalData() {
