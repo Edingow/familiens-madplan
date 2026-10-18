@@ -11,7 +11,8 @@ begin
   select share_key into k from members where user_id = auth.uid();
   if not found then raise exception 'Ikke med i en familie'; end if;
   if k is null or renew then
-    k := encode(gen_random_bytes(18), 'hex');
+    -- gen_random_uuid findes altid; to af dem giver en lang, tilfældig kode.
+    k := replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
     update members set share_key = k where user_id = auth.uid();
   end if;
   return k;
