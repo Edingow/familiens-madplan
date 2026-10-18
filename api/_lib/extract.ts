@@ -40,15 +40,32 @@ export function safeUrl(raw: unknown): URL | null {
   } catch { return null; }
 }
 
-async function fetchPage(u: URL): Promise<string> {
+const DESKTOP_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36";
+const BLOCKED = /cf-chl|challenge-platform|Just a moment\.\.\.|Attention Required|captcha/i;
+
+async function tryFetch(url: string, headers: Record<string, string>): Promise<string | null> {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 15000);
+  const t = setTimeout(() => ctrl.abort(), 12000);
   try {
-    const ua = SOCIAL.test(u.hostname) ? CRAWLER_UA : BROWSER_UA;
-    const r = await fetch(u, { headers: { "user-agent": ua, "accept-language": "da,en;q=0.8" }, redirect: "follow", signal: ctrl.signal });
-    if (!r.ok) throw new Error(`Siden svarede ${r.status}`);
-    return (await r.text()).slice(0, 3_000_000);
-  } finally { clearTimeout(t); }
+    const r = await fetch(url, { headers, redirect: "follow", signal: ctrl.signal });
+    if (!r.ok) return null;
+    const text = (await r.text()).slice(0, 3_000_000);
+    return BLOCKED.test(text.slice(0, 20000)) && !/application\/ld\+json/i.test(text) ? null : text;
+  } catch { return null; } finally { clearTimeout(t); }
+}
+
+/** Hent siden. Mange sider blokerer servere, så der prøves flere veje, til sidst via en læsetjeneste. */
+export async function fetchPage(u: URL): Promise<{ html: string; viaReader: boolean }> {
+  const common = { accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "accept-language": "da-DK,da;q=0.9,en;q=0.8" };
+  const uas = SOCIAL.test(u.hostname) ? [CRAWLER_UA, BROWSER_UA] : [BROWSER_UA, DESKTOP_UA, CRAWLER_UA];
+  for (const ua of uas) {
+    const html = await tryFetch(u.toString(), { ...common, "user-agent": ua });
+    if (html) return { html, viaReader: false };
+  }
+  // Reserve: Jina Reader henter siden for os og returnerer dens tekst.
+  const text = await tryFetch(`https://r.jina.ai/${u.toString()}`, { accept: "text/plain", "x-return-format": "text" });
+  if (text && text.trim().length > 200) return { html: text, viaReader: true };
+  throw new Error("Siden kunne ikke hentes");
 }
 
 /** Læs en opskrift fra et link, en tekst eller et billede. */
@@ -61,9 +78,14 @@ export async function extractRecipe(input: { url?: string; text?: string; image?
   if (input.url) {
     const u = safeUrl(input.url);
     if (!u) throw new InputError(400, "Linket ser ikke ud til at være en almindelig webadresse.");
-    let html: string;
-    try { html = await fetchPage(u); }
+    let html: string, viaReader: boolean;
+    try { ({ html, viaReader } = await fetchPage(u)); }
     catch { throw new InputError(422, "Siden kunne ikke hentes. Den kræver måske login. Kopiér opskriftens tekst og indsæt den i stedet."); }
+    if (viaReader) {
+      prompt = `Tekst fra opskriftssiden ${u.hostname} (kan indeholde menuer og reklamer):\n${html.slice(0, 20000)}`;
+      const r0 = await askClaude(prompt);
+      return r0;
+    }
     const structured = extractJsonLdRecipe(html);
     image = structured?.image ?? metaContent(html, "og:image");
     pageTitle = structured?.title ?? metaContent(html, "og:title");
@@ -84,14 +106,18 @@ export async function extractRecipe(input: { url?: string; text?: string; image?
     throw new InputError(400, "Send et link, en tekst eller et billede.");
   }
 
+  const r = await askClaude(prompt, input.image);
+  return { title: r.title || pageTitle, servings: r.servings ?? servingsHint, image, items: r.items };
+}
+
+async function askClaude(prompt: string, image?: ImageInput | null): Promise<Extracted> {
   const r = await claudeStructured<ClaudeRecipe>({
     system: RECIPE_SYSTEM,
     text: prompt,
-    images: input.image ? [input.image] : undefined,
+    images: image ? [image] : undefined,
     toolName: "gem_opskrift",
     schema: RECIPE_SCHEMA,
   });
-
   const items: Ingredient[] = (r.found ? r.items || [] : [])
     .filter((i) => i && typeof i.name === "string" && i.name.trim())
     .map((i) => ({
@@ -101,11 +127,5 @@ export async function extractRecipe(input: { url?: string; text?: string; image?
       category: asCategory(i.category),
       basic: !!i.basic,
     }));
-
-  return {
-    title: r.title?.trim() || pageTitle,
-    servings: r.servings ?? servingsHint,
-    image,
-    items,
-  };
+  return { title: r.title?.trim() || null, servings: r.servings ?? null, image: null, items };
 }

@@ -111,3 +111,26 @@ describe("serverfunktion /api/recipe", () => {
     expect(status).toBe(400);
   });
 });
+
+describe("hentning af blokerede sider", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("prøver flere veje og ender med læsetjenesten", async () => {
+    process.env.ANTHROPIC_API_KEY = "k";
+    const tried: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: any, init?: any) => {
+      const u = String(url);
+      if (u.startsWith("https://api.anthropic.com")) {
+        expect(JSON.parse(init.body).messages[0].content.at(-1).text).toContain("500 g kyllingebryst");
+        return new Response(JSON.stringify({ content: [{ type: "tool_use", input: { found: true, title: "Marry me kyllingesuppe", servings: 4, items: [{ name: "kyllingebryst", qty: 500, unit: "g", category: "kod", basic: false }] } }] }));
+      }
+      tried.push(u.startsWith("https://r.jina.ai/") ? "reader" : (init?.headers?.["user-agent"] || "").slice(0, 12));
+      if (u.startsWith("https://r.jina.ai/")) return new Response("Title: Marry me\n" + "Ingredienser\n500 g kyllingebryst\n1 løg\n".repeat(10));
+      return new Response("Forbidden", { status: 403 });
+    }));
+    const { extractRecipe } = await import("../api/_lib/extract");
+    const r = await extractRecipe({ url: "https://gourministeriet.dk/one-pot/" });
+    expect(tried).toHaveLength(4);
+    expect(tried[3]).toBe("reader");
+    expect(r.items[0].name).toBe("kyllingebryst");
+  });
+});
