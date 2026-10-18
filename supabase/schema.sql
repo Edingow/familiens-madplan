@@ -560,3 +560,6 @@ begin
   return m.display_name;
 end $$;
 grant execute on function public.save_shared_recipe(text, text, text, text, int, jsonb, int, text, jsonb) to anon, authenticated;
+
+-- 011_priser
+alter table public.families add column if not exists shop_prefs jsonb not null default '{}'::jsonb;

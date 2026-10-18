@@ -1,4 +1,5 @@
 import { asCategory, type Category, type Dish, type Extra, type Ingredient } from "./types";
+import type { Need } from "./shop";
 
 /** Vægt, rumfang og skeer lægges sammen på tværs af enheder. Andre enheder (stk, fed, dåse ...) for sig. */
 const UNITS: Record<string, [family: "m" | "v" | "s", factor: number]> = {
@@ -125,9 +126,9 @@ export function guessCategory(name: string): Category {
 }
 
 /** Behovet for en vare i butikkens enheder: gram, milliliter og styk. Skeer omregnes groft til ml. */
-export function needOf(item: ListItem): { key: string; name: string; g: number; ml: number; stk: number } {
+export function needOf(item: ListItem): Need {
   const t = item.totals;
   let stk = 0;
   for (const k of Object.keys(t)) if (k.startsWith("c:")) stk += t[k];
-  return { key: item.key, name: item.name, g: t.m || 0, ml: (t.v || 0) + (t.s || 0) * 5, stk };
+  return { key: item.key, name: item.name, qtyText: item.qtyText, g: t.m || 0, ml: (t.v || 0) + (t.s || 0) * 5, stk };
 }

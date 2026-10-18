@@ -74,6 +74,7 @@ export interface Family {
   plan_vote_sent_at: string | null;
   plan_assessment: PlanAssessment | null;
   plan_assessed_at: string | null;
+  shop_prefs?: Partial<import("./shop").ShopPrefs> | null;
 }
 
 export interface PlanAssessment {

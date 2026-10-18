@@ -3,6 +3,11 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 /** Midlertidigt testpunkt: afprøver butikkernes varesøgning fra serveren. Kræver ?secret=PUSH_SECRET. */
 export const config = { maxDuration: 60 };
 
+import { searchNemlig } from "./_lib/stores/nemlig.js";
+import { searchRema } from "./_lib/stores/rema.js";
+import { searchBilka } from "./_lib/stores/bilka.js";
+import { searchWolt } from "./_lib/stores/wolt.js";
+
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36";
 
 async function get(url: string, init: RequestInit = {}): Promise<{ status: number; text: string; json?: any }> {
@@ -65,6 +70,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       tests.push(`${key}: ${t.status} hits=${t.json?.nbHits}`);
     }
     out.bilka = { home: home.status, scripts: scripts.length, values: [...new Set(vals)], tests, hitCount: hits.length };
+  }
+  if (which === "adapters") {
+    const fns: [string, () => Promise<any[]>][] = [["nemlig", () => searchNemlig(q)], ["rema", () => searchRema(q)], ["bilka", () => searchBilka(q)],
+      ["meny", () => searchWolt("meny", q)], ["woltmarket", () => searchWolt("woltmarket", q)]];
+    const lines: string[] = [];
+    await Promise.all(fns.map(async ([n, f]) => {
+      try { const r = await f(); lines.push(`${n}: ${r.length} varer. ` + r.slice(0, 3).map((p) => `${p.name} | ${p.price} kr | ${JSON.stringify(p.size)} | ${p.unitPrice} ${p.unitPriceLabel} | øko=${p.organic} | ${p.url}`).join(" ;; ")); }
+      catch (e) { lines.push(`${n}: FEJL ${String(e)}`); }
+    }));
+    res.setHeader("content-type", "text/plain; charset=utf-8");
+    return res.status(200).send(lines.sort().join("\n"));
   }
   if (which === "bilka-api") {
     const home = await get("https://www.bilkatogo.dk/");

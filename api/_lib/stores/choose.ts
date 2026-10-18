@@ -1,17 +1,4 @@
-import type { StoreProduct } from "./types.js";
-
-export interface ShopPrefs {
-  /** "ignore": ligegyldigt, "prefer": økologi hvis den findes, "require": kun økologi. */
-  organic: "ignore" | "prefer" | "require";
-  favoriteBrands: string[];
-  blockedBrands: string[];
-}
-export const DEFAULT_PREFS: ShopPrefs = { organic: "ignore", favoriteBrands: [], blockedBrands: [] };
-
-/** Det, der skal købes af én vare: samlet mængde i gram, milliliter og styk. */
-export interface Need { key: string; name: string; g: number; ml: number; stk: number }
-
-export interface Line { product: StoreProduct; packs: number; total: number }
+import type { Line, Need, ShopPrefs, StoreProduct } from "../../../src/lib/shop.js";
 
 const brandOf = (p: StoreProduct) => `${p.brand ?? ""} ${p.name}`.toLowerCase();
 const matchesAny = (p: StoreProduct, brands: string[]) => brands.some((b) => b.trim() && brandOf(p).includes(b.trim().toLowerCase()));

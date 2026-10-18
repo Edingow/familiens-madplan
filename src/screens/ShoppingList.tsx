@@ -1,6 +1,8 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import { IconCamera, IconCheck } from "../components/Icons";
 import { Templates } from "../components/Templates";
+
+const PriceCompare = lazy(() => import("../components/PriceCompare").then((m) => ({ default: m.PriceCompare })));
 import { buildShoppingList, checkKey, guessCategory, parseLine } from "../lib/merge";
 import { errorText, supabase } from "../lib/supabase";
 import { CATEGORY_NAMES, DEFAULT_ORDER, type Category, type Product } from "../lib/types";
@@ -21,6 +23,7 @@ export function ShoppingList({ data, userId, setChecked, onChanged, openAdd }: P
   const [draft, setDraft] = useState("");
   const [scanning, setScanning] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [pricesOpen, setPricesOpen] = useState(false);
   const [msg, setMsg] = useState<{ text: string; err?: boolean } | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -83,6 +86,7 @@ export function ShoppingList({ data, userId, setChecked, onChanged, openAdd }: P
       )}
       <div className="row" style={{ marginTop: 10 }}>
         <button className="btn small" onClick={() => setTemplatesOpen(true)}>+ Tilføj indkøbsliste</button>
+        {doneCount < items.length && <button className="btn small" onClick={() => setPricesOpen(true)}>Se priser og køb online</button>}
       {items.length > 0 && (
         <>
           {doneCount > 0 && <button className="btn ghost small" disabled={clearing} onClick={() => clearList(false)}>Ryd købte varer ({doneCount})</button>}
@@ -165,6 +169,11 @@ export function ShoppingList({ data, userId, setChecked, onChanged, openAdd }: P
       {templatesOpen && (
         <Templates data={data} userId={userId} onClose={() => setTemplatesOpen(false)}
           onAdded={(n, listName) => { setTemplatesOpen(false); setMsg({ text: `${n} ${n === 1 ? "vare" : "varer"} fra ${listName} er lagt på listen.` }); onChanged(); }} />
+      )}
+      {pricesOpen && (
+        <Suspense fallback={null}>
+          <PriceCompare data={data} items={items.filter((i) => !isDone(i.key))} onClose={() => setPricesOpen(false)} onChanged={onChanged} />
+        </Suspense>
       )}
       {scanning && <Suspense fallback={null}><Scanner onClose={() => setScanning(false)} onProduct={onProduct} /></Suspense>}
     </>

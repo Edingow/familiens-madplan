@@ -1,34 +1,7 @@
-/** Fælles format for en vare fundet i en butik. */
-export interface StoreProduct {
-  store: StoreId;
-  id: string;
-  name: string;
-  brand: string | null;
-  /** Pris for én pakning i kr. */
-  price: number;
-  /** Normalpris, hvis varen er på tilbud. */
-  normalPrice: number | null;
-  /** Pakningens størrelse i basisenhed: gram, milliliter eller styk. */
-  size: { amount: number; unit: "g" | "ml" | "stk" } | null;
-  /** Kilopris/literpris i kr., hvis butikken oplyser den. */
-  unitPrice: number | null;
-  unitPriceLabel: string | null;
-  organic: boolean;
-  url: string;
-  image: string | null;
-}
+import type { StoreId, StoreProduct } from "../../../src/lib/shop.js";
+export type { StoreId, StoreProduct };
 
-export type StoreId = "nemlig" | "bilka" | "rema" | "netto" | "foetex" | "lidl" | "meny" | "woltmarket";
-
-export interface StoreInfo {
-  id: StoreId;
-  name: string;
-  /** Kan bestilles online (levering eller afhentning). */
-  online: boolean;
-  search: (query: string) => Promise<StoreProduct[]>;
-}
-
-const UNIT_RE = /(\d+(?:[.,]\d+)?)\s*(?:x\s*(\d+(?:[.,]\d+)?)\s*)?(kg|g|gr|l|ltr|liter|dl|cl|ml|stk|st)\b/i;
+const UNIT_RE = /(\d+(?:[.,]\d+)?)\s*(?:x\s*(\d+(?:[.,]\d+)?)\s*)?(kg|g|gr|l|lt|ltr|liter|dl|cl|ml|stk|st)\b/i;
 
 /** Læs pakningsstørrelse fra tekst som "500 g", "1 l", "6 x 33 cl" eller "10 stk". */
 export function parseSize(text: string | null | undefined): StoreProduct["size"] {
@@ -41,7 +14,7 @@ export function parseSize(text: string | null | undefined): StoreProduct["size"]
   if (!isFinite(a) || a <= 0) return null;
   if (u === "kg") return { amount: a * 1000, unit: "g" };
   if (u === "g" || u === "gr") return { amount: a, unit: "g" };
-  if (u === "l" || u === "ltr" || u === "liter") return { amount: a * 1000, unit: "ml" };
+  if (u === "l" || u === "lt" || u === "ltr" || u === "liter") return { amount: a * 1000, unit: "ml" };
   if (u === "dl") return { amount: a * 100, unit: "ml" };
   if (u === "cl") return { amount: a * 10, unit: "ml" };
   if (u === "ml") return { amount: a, unit: "ml" };
@@ -62,3 +35,11 @@ export async function fetchJson(url: string, init: RequestInit = {}, timeoutMs =
     return await r.json();
   } finally { clearTimeout(t); }
 }
+
+/** URL-venlig udgave af et varenavn. */
+export const slugify = (s: string) =>
+  s.toLowerCase().replace(/æ/g, "ae").replace(/ø/g, "oe").replace(/å/g, "aa").normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+/** Pæn store forbogstav: "LETMÆLK 1,5%" → "Letmælk 1,5%". */
+export const tidyName = (s: string) => (/[a-zæøå]/.test(s) ? s : s.toLowerCase().replace(/^./, (c) => c.toUpperCase()));
