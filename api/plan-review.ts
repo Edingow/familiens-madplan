@@ -5,10 +5,11 @@ import { fail, requireUser } from "./_lib/http.js";
 export const config = { maxDuration: 60 };
 
 interface InDish { title: string; day: string | null; kcal: number | null; servings: number | null; items: string[] }
+interface Swap { from: string; to: string; category: string }
 export interface PlanAssessment {
   rating: "god" | "middel" | "mindre god";
   summary: string;
-  points: { kind: "plus" | "minus"; text: string }[];
+  points: { kind: "plus" | "minus"; text: string; dish?: number | null; swaps?: Swap[] }[];
 }
 
 const SYSTEM = `Du vurderer en dansk families madplan for ugen ud fra Fødevarestyrelsens officielle kostråd:
@@ -24,6 +25,7 @@ Svar på dansk, kort og venligt, som en hjælpsom ven, der kender kostrådene. I
 - rating: "god", "middel" eller "mindre god".
 - summary: én sætning, der opsummerer ugen.
 - points: 2-4 konkrete punkter. "plus" for det, der er godt, "minus" for det, der kan forbedres, med et konkret forslag, fx "Byt torsdagens pasta til fuldkornspasta".
+- Når et minus kan løses ved at bytte ingredienser i én ret, så udfyld dish med rettens nummer fra listen og swaps med de ombytninger, der skal ske. from skal være præcis en ingrediens fra rettens liste, to er den nye ingrediens på dansk med små bogstaver, og category er dens afdeling (frugt, brod, kod, mejeri, kol, kolonial, krydderi, frost, drikke, andet). Mængden bevares. Kan forslaget ikke løses med en ombytning, så lad dish være null og swaps være tom.
 Brug ikke tankestreger.`;
 
 const SCHEMA = {
@@ -35,8 +37,20 @@ const SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        properties: { kind: { type: "string", enum: ["plus", "minus"] }, text: { type: "string" } },
-        required: ["kind", "text"],
+        properties: {
+          kind: { type: "string", enum: ["plus", "minus"] },
+          text: { type: "string" },
+          dish: { type: ["integer", "null"] },
+          swaps: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: { from: { type: "string" }, to: { type: "string" }, category: { type: "string" } },
+              required: ["from", "to", "category"],
+            },
+          },
+        },
+        required: ["kind", "text", "dish", "swaps"],
       },
     },
   },
@@ -50,8 +64,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const dishes: InDish[] = Array.isArray(body.dishes) ? body.dishes.slice(0, 21) : [];
   if (!dishes.length) return fail(res, 400, "Madplanen er tom.");
 
-  const text = "Ugens madplan:\n" + dishes.map((d) =>
-    `- ${d.day ?? "Uden dag"}: ${String(d.title).slice(0, 120)}` +
+  const text = "Ugens madplan:\n" + dishes.map((d, i) =>
+    `${i + 1}. ${d.day ?? "Uden dag"}: ${String(d.title).slice(0, 120)}` +
     (d.kcal ? ` (ca. ${d.kcal} kcal pr. person)` : "") +
     (d.items?.length ? `\n  Ingredienser: ${d.items.slice(0, 40).map((x) => String(x).slice(0, 60)).join(", ")}` : "\n  Ingredienser: ukendt"),
   ).join("\n");
@@ -61,7 +75,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const out: PlanAssessment = {
       rating: ["god", "middel", "mindre god"].includes(r.rating) ? r.rating : "middel",
       summary: String(r.summary || "").slice(0, 300),
-      points: (r.points || []).slice(0, 4).map((p) => ({ kind: p.kind === "plus" ? "plus" : "minus", text: String(p.text).slice(0, 200) })),
+      points: (r.points || []).slice(0, 4).map((p) => {
+        const kind = p.kind === "plus" ? "plus" as const : "minus" as const;
+        const dish = kind === "minus" && Number.isInteger(p.dish) && p.dish! >= 1 && p.dish! <= dishes.length ? p.dish! : null;
+        const swaps = dish ? (p.swaps || []).slice(0, 5).map((w) => ({ from: String(w.from).toLowerCase().trim(), to: String(w.to).toLowerCase().trim(), category: String(w.category) }))
+          .filter((w) => w.from && w.to && dishes[dish - 1].items.some((x) => x.toLowerCase().trim() === w.from)) : [];
+        return { kind, text: String(p.text).slice(0, 200), dish: swaps.length ? dish : null, swaps };
+      }),
     };
     res.status(200).json(out);
   } catch (e) {

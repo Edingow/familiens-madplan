@@ -59,7 +59,7 @@ describe("serverfunktion /api/plan-review", () => {
       const u = String(url);
       if (u.includes("/auth/v1/user")) return new Response(JSON.stringify({ id: "u1" }));
       prompt = JSON.parse(init.body).messages[0].content.at(-1).text;
-      return new Response(JSON.stringify({ content: [{ type: "tool_use", input: { rating: "middel", summary: "Fin uge med lidt meget rødt kød.", points: [{ kind: "minus", text: "Byt tirsdagens lasagne til fisk." }, { kind: "plus", text: "Masser af grønt." }, { kind: "x", text: "y" }, { kind: "plus", text: "z" }, { kind: "plus", text: "for mange" }] } }] }));
+      return new Response(JSON.stringify({ content: [{ type: "tool_use", input: { rating: "middel", summary: "Fin uge med lidt meget rødt kød.", points: [{ kind: "minus", text: "Brug fuldkornspasta.", dish: 1, swaps: [{ from: "pasta", to: "fuldkornspasta", category: "kolonial" }, { from: "findes ikke", to: "x", category: "andet" }] }, { kind: "plus", text: "Masser af grønt." }, { kind: "x", text: "y" }, { kind: "plus", text: "z" }, { kind: "plus", text: "for mange" }] } }] }));
     }));
     const { default: handler } = await import("../api/plan-review");
     let status = 0, out: any;
@@ -70,6 +70,8 @@ describe("serverfunktion /api/plan-review", () => {
     expect(out.rating).toBe("middel");
     expect(out.points).toHaveLength(4);
     expect(out.points[2].kind).toBe("minus");
+    expect(out.points[0]).toMatchObject({ dish: 1, swaps: [{ from: "pasta", to: "fuldkornspasta", category: "kolonial" }] });
+    expect(out.points[1]).toMatchObject({ dish: null, swaps: [] });
     vi.unstubAllGlobals();
   });
 });

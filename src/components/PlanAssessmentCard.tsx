@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { assessPlan, plannedIds } from "../lib/assess";
+import { assessPlan, decidePoint, plannedIds } from "../lib/assess";
 import { errorText } from "../lib/supabase";
 import type { FamilyData } from "../lib/useFamily";
 
@@ -13,6 +13,10 @@ export function PlanAssessmentCard({ data, onChanged }: { data: FamilyData; onCh
   if (!hasPlan || (!a && !isParent)) return null;
 
   const stale = !!a && a.dishIds !== plannedIds(data.dishes);
+  async function decide(i: number, accept: boolean) {
+    setBusy(true); setErr("");
+    try { await decidePoint(data, i, accept); onChanged(); } catch (e) { setErr(errorText(e)); } finally { setBusy(false); }
+  }
   async function run() {
     setBusy(true); setErr("");
     try { await assessPlan(data); onChanged(); } catch (e) { setErr(errorText(e)); } finally { setBusy(false); }
@@ -38,9 +42,22 @@ export function PlanAssessmentCard({ data, onChanged }: { data: FamilyData; onCh
       <div className="small">{a.summary}</div>
       <ul className="small" style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "grid", gap: 4 }}>
         {a.points.map((p, i) => (
-          <li key={i} style={{ display: "flex", gap: 8 }}>
+          <li key={i} style={{ display: "flex", gap: 8, opacity: p.status === "rejected" ? 0.5 : 1 }}>
             <span aria-hidden="true" style={{ color: p.kind === "plus" ? "var(--yes)" : "var(--no)", fontWeight: 700 }}>{p.kind === "plus" ? "+" : "−"}</span>
-            <span>{p.text}</span>
+            <span style={{ display: "grid", gap: 4, flex: 1 }}>
+              <span style={{ textDecoration: p.status === "rejected" ? "line-through" : "none" }}>{p.text}</span>
+              {p.kind === "minus" && p.swaps && p.swaps.length > 0 && !p.status && (
+                <span className="muted">Byt {p.swaps.map((w) => `${w.from} til ${w.to}`).join(", ")}</span>
+              )}
+              {p.status === "accepted" && <span style={{ color: "var(--yes)", fontWeight: 600 }}>{p.swaps?.length ? "Byttet på madplanen og indkøbslisten" : "Accepteret"}</span>}
+              {p.status === "rejected" && <span className="muted">Afvist</span>}
+              {p.kind === "minus" && !p.status && isParent && (
+                <span className="row" style={{ gap: 6 }}>
+                  <button className="btn small" disabled={busy} onClick={() => decide(i, true)}>Acceptér</button>
+                  <button className="btn ghost small" disabled={busy} onClick={() => decide(i, false)}>Afvis</button>
+                </span>
+              )}
+            </span>
           </li>
         ))}
       </ul>

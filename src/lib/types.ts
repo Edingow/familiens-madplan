@@ -65,7 +65,15 @@ export interface Family {
 export interface PlanAssessment {
   rating: "god" | "middel" | "mindre god";
   summary: string;
-  points: { kind: "plus" | "minus"; text: string }[];
+  points: {
+    kind: "plus" | "minus";
+    text: string;
+    /** Ret nummer i den rækkefølge, der blev sendt (1-baseret), og ingredienser der kan byttes. */
+    dish?: number | null;
+    swaps?: { from: string; to: string; category: string }[];
+    dishId?: string | null;
+    status?: "accepted" | "rejected";
+  }[];
   /** Hvilke retter vurderingen gjaldt, så appen kan se, om madplanen er ændret siden. */
   dishIds?: string;
 }
