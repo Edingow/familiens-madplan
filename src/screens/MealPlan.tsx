@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { DishCard } from "../components/DishCard";
+import { errorText, supabase } from "../lib/supabase";
 import type { Dish } from "../lib/types";
 import type { FamilyData } from "../lib/useFamily";
 import { dayLabel, nextDays } from "../lib/util";
@@ -10,6 +12,14 @@ export function MealPlan({ data, userId, onFill, onChanged, openAdd }: Props) {
   const days = nextDays();
   const dayIsos = new Set(days.map((d) => d.iso));
   const undated = planned.filter((d) => !d.plan_date || !dayIsos.has(d.plan_date));
+  const isParent = data.me?.role === "parent";
+  const [confirm, setConfirm] = useState(false);
+  const [err, setErr] = useState("");
+  async function newWeek() {
+    setConfirm(false);
+    const { error } = await supabase.rpc("new_week");
+    if (error) setErr(errorText(error)); else onChanged();
+  }
   const card = (d: Dish) => <DishCard key={d.id} dish={d} data={data} userId={userId} onFill={onFill} onChanged={onChanged} />;
 
   if (!planned.length) {
@@ -42,6 +52,22 @@ export function MealPlan({ data, userId, onFill, onChanged, openAdd }: Props) {
               {card(d)}
             </div>
           ))}
+        </div>
+      )}
+      {isParent && (
+        <div className="section">
+          {err && <p className="status err">{err}</p>}
+          {!confirm ? (
+            <button className="btn ghost small" onClick={() => setConfirm(true)}>Ny uge: ryd madplanen</button>
+          ) : (
+            <div className="card">
+              <p style={{ margin: 0 }}>Ugens retter fjernes fra madplanen, og indkøbslisten ryddes for hele familien. Opskrifterne og retter til afstemning bliver liggende.</p>
+              <div className="row end">
+                <button className="btn ghost" onClick={() => setConfirm(false)}>Behold</button>
+                <button className="btn danger" onClick={newWeek}>Start ny uge</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </>

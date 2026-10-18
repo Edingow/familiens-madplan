@@ -20,7 +20,8 @@ export function ShoppingList({ data, userId, setChecked, onChanged, openAdd }: P
   const [draft, setDraft] = useState("");
   const [scanning, setScanning] = useState(false);
   const [msg, setMsg] = useState<{ text: string; err?: boolean } | null>(null);
-  const [confirmNewWeek, setConfirmNewWeek] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const isParent = data.me?.role === "parent";
 
   const items = useMemo(() => buildShoppingList(data.dishes, data.extras), [data.dishes, data.extras]);
@@ -52,10 +53,14 @@ export function ShoppingList({ data, userId, setChecked, onChanged, openAdd }: P
     } catch (err) { setMsg({ text: errorText(err), err: true }); }
   }
 
-  async function newWeek() {
-    setConfirmNewWeek(false);
-    const { error } = await supabase.rpc("new_week");
+  /** Købte varer forsvinder fra listen. Retterne bliver på madplanen. Uden navne ryddes hele listen. */
+  async function clearList(all: boolean) {
+    setConfirmClear(false); setClearing(true);
+    const names = all ? null : items.filter((i) => isDone(i.key)).map((i) => i.key);
+    const { error } = await supabase.rpc("clear_list", names ? { names } : {});
+    setClearing(false);
     if (error) setMsg({ text: errorText(error), err: true });
+    else setMsg({ text: all ? "Listen er ryddet." : `${names!.length} købte varer er fjernet.` });
     onChanged();
   }
 
@@ -72,6 +77,21 @@ export function ShoppingList({ data, userId, setChecked, onChanged, openAdd }: P
             }} />
             Skjul købte
           </label>
+        </div>
+      )}
+      {items.length > 0 && (
+        <div className="row" style={{ marginTop: 10 }}>
+          {doneCount > 0 && <button className="btn small" disabled={clearing} onClick={() => clearList(false)}>Ryd købte varer ({doneCount})</button>}
+          {isParent && !confirmClear && <button className="btn ghost small" disabled={clearing} onClick={() => setConfirmClear(true)}>Ryd hele listen</button>}
+        </div>
+      )}
+      {confirmClear && (
+        <div className="card" style={{ marginTop: 10 }}>
+          <p style={{ margin: 0 }}>Alle varer fjernes fra listen for hele familien. Retterne bliver liggende på madplanen.</p>
+          <div className="row end">
+            <button className="btn ghost" onClick={() => setConfirmClear(false)}>Behold</button>
+            <button className="btn danger" onClick={() => clearList(true)}>Ryd hele listen</button>
+          </div>
         </div>
       )}
 
@@ -134,24 +154,6 @@ export function ShoppingList({ data, userId, setChecked, onChanged, openAdd }: P
               </span>
             ))}
           </div>
-        </div>
-      )}
-
-      {isParent && (items.length > 0 || planned > 0) && (
-        <div className="section stack">
-          {!confirmNewWeek ? (
-            <div className="row">
-              <button className="btn ghost small" onClick={() => setConfirmNewWeek(true)}>Ny uge: ryd listen</button>
-            </div>
-          ) : (
-            <div className="card">
-              <p style={{ margin: 0 }}>Ugens retter flyttes ud af madplanen, og tilføjede varer og flueben slettes for hele familien. Retter til afstemning bliver liggende.</p>
-              <div className="row end">
-                <button className="btn ghost" onClick={() => setConfirmNewWeek(false)}>Behold</button>
-                <button className="btn danger" onClick={newWeek}>Start ny uge</button>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
