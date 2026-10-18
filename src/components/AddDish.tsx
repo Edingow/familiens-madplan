@@ -3,7 +3,7 @@ import { planRecipe } from "../lib/actions";
 import { callApi, errorText, supabase } from "../lib/supabase";
 import type { Dish, ParsedRecipe, Recipe } from "../lib/types";
 import type { FamilyData } from "../lib/useFamily";
-import { defaultDeadline, hostOf, imageToDataUrl, nextDays } from "../lib/util";
+import { hostOf, imageToDataUrl, nextDays } from "../lib/util";
 
 type Mode = "link" | "text" | "photo" | "idea";
 export type Where = "recipes" | "planned" | "voting";
@@ -87,7 +87,7 @@ export function AddDish({ data, userId, initialUrl, fill, onClose, onSaved }: Pr
       ...base, servings, recipe_id: recipeId, image: d.image || recipe!.image, url: d.url || url.trim() || null,
     }).eq("id", d.id);
     if (error) throw error;
-    onSaved(d.status === "voting" ? "voting" : "planned");
+    onSaved("planned");
   }
 
   async function save() {
@@ -95,42 +95,42 @@ export function AddDish({ data, userId, initialUrl, fill, onClose, onSaved }: Pr
     try {
       if (fill) { await saveFill(); return; }
 
-      if (mode === "idea") {
+      if (mode === "idea" && isParent) {
         const t = title.trim();
         if (!t) throw new Error("Skriv, hvad I skal have.");
-        const status = dest === "planned" ? "planned" : "voting";
         const { error } = await supabase.from("dishes").insert({
           family_id: data.family!.id, title: t, url: url.trim() || null, note: note.trim() || null, items: [],
-          status, plan_date: status === "planned" && day ? day : null,
-          vote_deadline: status === "voting" ? defaultDeadline().toISOString() : null, created_by: userId,
+          status: "planned", plan_date: day || null, created_by: userId,
         });
         if (error) throw error;
-        onSaved(status);
+        onSaved("planned");
         return;
       }
 
       const t = (title || recipe?.title || "").trim();
-      if (!t) throw new Error("Giv opskriften et navn.");
+      if (!t) throw new Error(mode === "idea" ? "Skriv, hvad I skal have." : "Giv opskriften et navn.");
       const { data: row, error } = await supabase.from("recipes").insert({
         family_id: data.family!.id, title: t, url: url.trim() || null, image: recipe?.image ?? null,
         note: note.trim() || null, servings_base: servings, items: recipe?.items ?? [], created_by: userId,
+        suggested: !isParent,
       }).select("*").single();
       if (error) throw error;
-      if (dest !== "recipes") await planRecipe(row as Recipe, userId, { status: dest, date: day, servings });
-      onSaved(dest);
+      if (isParent && dest === "planned") { await planRecipe(row as Recipe, userId, { status: "planned", date: day, servings }); onSaved("planned"); }
+      else onSaved("recipes");
     } catch (e) { setStatus({ text: errorText(e), err: true }); setBusy(false); }
   }
 
   const ready = mode === "idea" ? title.trim().length > 0 : !!recipe;
-  const switchMode = (m: Mode) => { setMode(m); setStatus(null); if (m === "idea") { setDest(isParent ? "planned" : "voting"); } else if (dest !== "planned" && dest !== "voting") setDest("recipes"); };
+  const switchMode = (m: Mode) => { setMode(m); setStatus(null); if (m === "idea" && isParent) setDest("planned"); };
 
-  const destOptions: { value: Where; label: string }[] = mode === "idea"
-    ? [...(isParent ? [{ value: "planned" as Where, label: "På madplanen" }] : []), { value: "voting", label: "Til afstemning" }]
-    : [{ value: "recipes", label: "Kun gem" }, ...(isParent ? [{ value: "planned" as Where, label: "+ Madplan" }] : []), { value: "voting", label: "+ Afstemning" }];
+  const destOptions: { value: Where; label: string }[] = isParent && mode !== "idea"
+    ? [{ value: "recipes", label: "Kun gem" }, { value: "planned", label: "+ Madplan" }]
+    : [];
 
   const saveLabel = fill ? "Gem ingredienser"
-    : mode === "idea" ? (dest === "planned" ? "Sæt på madplanen" : "Send til afstemning")
-    : dest === "planned" ? "Gem og sæt på madplanen" : dest === "voting" ? "Gem og send til afstemning" : "Gem i opskrifter";
+    : !isParent ? "Send forslag"
+    : mode === "idea" ? "Sæt på madplanen"
+    : dest === "planned" ? "Gem og sæt på madplanen" : "Gem i opskrifter";
 
   return (
     <div className="sheet" onClick={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
@@ -174,7 +174,7 @@ export function AddDish({ data, userId, initialUrl, fill, onClose, onSaved }: Pr
             )}
             {mode === "idea" && (
               <div className="stack">
-                <p className="muted small" style={{ margin: 0 }}>En idé uden opskrift går direkte på madplanen eller til afstemning.</p>
+                <p className="muted small" style={{ margin: 0 }}>{isParent ? "En idé uden opskrift går direkte på madplanen." : "Din idé bliver et forslag under Opskrifter."}</p>
                 <label className="field">Hvad skal vi have?
                   <input id="idea" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Fx tacos" />
                 </label>
@@ -220,7 +220,8 @@ export function AddDish({ data, userId, initialUrl, fill, onClose, onSaved }: Pr
                 {destOptions.map((o) => <button key={o.value} aria-pressed={dest === o.value} onClick={() => setDest(o.value)}>{o.label}</button>)}
               </div>
             )}
-            {dest === "planned" && (
+            {!isParent && <p className="muted small" style={{ margin: 0 }}>Opskriften gemmes som dit forslag, så mor og far kan se den.</p>}
+            {isParent && dest === "planned" && (
               <label className="field">Dag
                 <select id="day" value={day} onChange={(e) => setDay(e.target.value)}>
                   <option value="">Ingen bestemt dag</option>

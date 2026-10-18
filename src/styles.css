@@ -128,3 +128,13 @@ label.field { display: grid; gap: 5px; font-size: .86rem; font-weight: 600; }
 .list > div:first-child { border-top: 0; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+.plan-day { display: grid; gap: 8px; }
+.plan-day .day-label { margin: 0; }
+.plan-row { display: flex; align-items: center; gap: 8px; }
+.plan-row .main { display: grid; gap: 2px; }
+.plan-row .nm a { color: var(--ink); text-decoration-color: var(--line); }
+.day-select { width: auto; padding: 6px 8px; font-size: .86rem; }
+.icon-btn { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; width: 34px; height: 34px; color: var(--muted); font-size: 1.1rem; flex: none; }
+.list > .plan-day { display: grid; justify-content: stretch; }
+.suggest { border-color: var(--tag); }

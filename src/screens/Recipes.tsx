@@ -18,13 +18,15 @@ interface Props {
 export function Recipes({ data, userId, onChanged, openAdd, onFill, goTo }: Props) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
-  const list = data.recipes.filter((r) => !q || r.title.toLowerCase().includes(q) || r.items.some((i) => i.name.includes(q)));
+  const matches = data.recipes.filter((r) => !q || r.title.toLowerCase().includes(q) || r.items.some((i) => i.name.includes(q)));
+  const suggestions = matches.filter((r) => r.suggested);
+  const list = matches.filter((r) => !r.suggested);
 
   if (!data.recipes.length) {
     return (
       <div className="empty">
         <h2>Ingen opskrifter endnu</h2>
-        <p>Gem opskrifter fra links, tekst eller fotos af kogebøger. Herfra kan I lægge dem på madplanen eller sende dem til afstemning, igen og igen.</p>
+        <p>Gem opskrifter fra links, tekst eller fotos af kogebøger. Herfra lægges de på madplanen, igen og igen. Børnenes forslag kommer også her.</p>
         <button className="btn" onClick={openAdd}>Tilføj opskrift</button>
       </div>
     );
@@ -35,7 +37,15 @@ export function Recipes({ data, userId, onChanged, openAdd, onFill, goTo }: Prop
       <div style={{ marginTop: 16 }}>
         <input id="search" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Søg i ${data.recipes.length} opskrifter eller ingredienser`} autoComplete="off" />
       </div>
-      {!list.length && <p className="muted" style={{ marginTop: 16 }}>Ingen opskrifter matcher "{query}".</p>}
+      {!matches.length && <p className="muted" style={{ marginTop: 16 }}>Ingen opskrifter matcher "{query}".</p>}
+      {suggestions.length > 0 && (
+        <div className="section">
+          <span className="sign">Forslag<small>{suggestions.length}</small></span>
+          <div style={{ marginTop: 8 }}>
+            {suggestions.map((r) => <RecipeCard key={r.id} recipe={r} data={data} userId={userId} onChanged={onChanged} onFill={onFill} goTo={goTo} />)}
+          </div>
+        </div>
+      )}
       <div className="section">
         {list.map((r) => <RecipeCard key={r.id} recipe={r} data={data} userId={userId} onChanged={onChanged} onFill={onFill} goTo={goTo} />)}
       </div>
@@ -53,7 +63,6 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo }: { reci
   const [err, setErr] = useState("");
 
   const onPlan = data.dishes.filter((d) => d.recipe_id === r.id && d.status === "planned");
-  const inVote = data.dishes.some((d) => d.recipe_id === r.id && d.status === "voting");
   const author = data.members.find((m) => m.user_id === r.created_by)?.display_name;
 
   async function run(fn: () => Promise<void>, then?: () => void) {
@@ -64,7 +73,7 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo }: { reci
   }
 
   return (
-    <article className="card">
+    <article className={"card" + (r.suggested ? " suggest" : "")}>
       <div className="card-head">
         {r.image && <img src={r.image} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(e) => { (e.target as HTMLImageElement).hidden = true; }} />}
         <div className="main">
@@ -73,10 +82,10 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo }: { reci
             {[r.items.length ? `${r.items.length} ingredienser` : "Ingen ingredienser endnu", r.servings_base && `${r.servings_base} pers.`, author].filter(Boolean).join(" · ")}
           </span>
           {r.url && <a className="small" href={r.url} target="_blank" rel="noopener noreferrer">{hostOf(r.url)}</a>}
-          {(onPlan.length > 0 || inVote) && (
+          {(onPlan.length > 0 || r.suggested) && (
             <div className="row" style={{ marginTop: 2 }}>
+              {r.suggested && <span className="pill warn">Forslag fra {author ?? "familien"}</span>}
               {onPlan.map((d) => <span key={d.id} className="pill">{d.plan_date ? dayLabel(d.plan_date) : "På madplanen"}</span>)}
-              {inVote && <span className="pill warn">Til afstemning</span>}
             </div>
           )}
         </div>
@@ -84,9 +93,11 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo }: { reci
 
       <div className="row">
         {isParent && <button className="btn small" disabled={busy} onClick={() => setPanel(panel === "plan" ? "none" : "plan")}>Læg på madplanen</button>}
-        {!inVote && (
-          <button className="btn ghost small" disabled={busy}
-            onClick={() => run(() => planRecipe(r, userId, { status: "voting" }), () => goTo("vote"))}>Send til afstemning</button>
+        {isParent && r.suggested && (
+          <button className="btn ghost small" disabled={busy} onClick={() => run(async () => {
+            const { error } = await supabase.from("recipes").update({ suggested: false }).eq("id", r.id);
+            if (error) throw error;
+          })}>Ikke nu</button>
         )}
         {r.items.length > 0 && <button className="link" onClick={() => setPanel(panel === "items" ? "none" : "items")}>{panel === "items" ? "Skjul" : "Ingredienser"}</button>}
         {canEdit && r.items.length === 0 && <button className="btn ghost small" onClick={() => onFill({ kind: "recipe", recipe: r })}>Hent ingredienser</button>}
@@ -110,7 +121,10 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo }: { reci
           )}
           <div className="row end">
             <button className="btn ghost" onClick={() => setPanel("none")}>Fortryd</button>
-            <button className="btn" disabled={busy} onClick={() => run(() => planRecipe(r, userId, { status: "planned", date: day, servings }), () => goTo("plan"))}>Sæt på madplanen</button>
+            <button className="btn" disabled={busy} onClick={() => run(async () => {
+              await planRecipe(r, userId, { status: "planned", date: day, servings });
+              if (r.suggested) await supabase.from("recipes").update({ suggested: false }).eq("id", r.id);
+            }, () => goTo("plan"))}>Sæt på madplanen</button>
           </div>
         </div>
       )}

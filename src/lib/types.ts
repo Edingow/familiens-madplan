@@ -72,6 +72,7 @@ export interface Recipe {
   note: string | null;
   servings_base: number | null;
   items: Ingredient[];
+  suggested: boolean;
   created_by: string | null;
   created_at: string;
 }
@@ -98,6 +99,7 @@ export interface Vote {
   dish_id: string;
   user_id: string;
   value: 1 | -1;
+  comment: string | null;
 }
 
 export interface Extra {

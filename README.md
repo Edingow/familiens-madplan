@@ -6,8 +6,8 @@ Madplan, afstemning og fælles indkøbsliste for hele familien. Kører som app p
 - Konti for alle i familien. Forældre har fuld adgang. Børn kan foreslå retter, stemme og krydse af på listen.
 - Familiens kogebog under **Opskrifter**: gem opskrifter fra et link, indsat tekst eller et foto af en kogebog, og læg dem på madplanen eller til afstemning igen og igen.
 - Idéer uden opskrift kan lægges direkte på madplanen eller til afstemning.
-- Forældre vælger, om en ret skal direkte på madplanen eller til afstemning. Børns forslag går altid til afstemning.
-- Afstemning med frist (søndag kl. 18). Alle kan se, hvem der har stemt hvad.
+- Børnenes nye opskrifter og idéer bliver forslag under Opskrifter, som forældre kan lægge på madplanen.
+- Afstemning om ugens madplan: alle kan markere retter som "ikke for mig" med en kort kommentar.
 - Madplan for de næste 7 dage.
 - Samlet indkøbsliste, hvor samme vare kun står én gang, sorteret i jeres butiks rækkefølge.
 - Stregkodescanner med opslag i Open Food Facts. Foto af emballagen, når stregkoden ikke findes.
@@ -32,7 +32,7 @@ npm install
 
 ### 2. Opret databasen i Supabase
 1. Opret en gratis konto på https://supabase.com og tryk **New project**. Vælg region **Frankfurt (eu-central-1)**.
-2. Gå til **SQL Editor** → **New query**, indsæt hele indholdet af `supabase/schema.sql` og tryk **Run**. Har du en database fra før Opskrifter-fanen, så kør i stedet `supabase/002_opskrifter.sql`.
+2. Gå til **SQL Editor** → **New query**, indsæt hele indholdet af `supabase/schema.sql` og tryk **Run**. Har du en ældre database, så kør i stedet de nummererede filer (`002_…`, `003_…`, `004_…`), du ikke har kørt endnu.
 3. Gå til **Authentication** → **Sign In / Providers** → **Email**. Slå **Confirm email** fra, hvis I vil kunne logge ind med det samme uden bekræftelsesmail.
 4. Gå til **Project Settings** → **API** og kopiér **Project URL** og **anon public key**. Dem skal du bruge i trin 4.
 

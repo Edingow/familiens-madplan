@@ -54,11 +54,10 @@ function Main({ userId, sharedUrl, clearShared }: { userId: string; sharedUrl?: 
   if (fam.loading && !data.me) return null;
   if (!data.me || !data.family) return <Onboarding onDone={fam.reloadAll} />;
 
-  const pendingVotes = data.dishes.filter((d) =>
-    d.status === "voting" && (!d.vote_deadline || new Date(d.vote_deadline) > new Date()) &&
-    !data.votes.some((v) => v.dish_id === d.id && v.user_id === userId)).length;
+  const openSuggestions = data.me.role === "parent" ? data.recipes.filter((r) => r.suggested).length : 0;
+  const goTo = (t: Tab) => { setTab(t); window.scrollTo(0, 0); };
 
-  const common = { data, userId, onChanged: fam.reloadAll, openAdd: () => setAdding(true), onFill: (d: Dish) => setFill({ kind: "dish", dish: d }) };
+  const common = { data, userId, onChanged: fam.reloadAll, openAdd: () => setAdding(true), onFill: (d: Dish) => setFill({ kind: "dish", dish: d }), goTo };
 
   const tabBtn = (t: Tab, icon: React.ReactNode, badge?: number) => (
     <button className="tab" aria-current={tab === t ? "page" : undefined} onClick={() => { setTab(t); window.scrollTo(0, 0); }}>
@@ -77,8 +76,8 @@ function Main({ userId, sharedUrl, clearShared }: { userId: string; sharedUrl?: 
 
         {tab === "list" && <ShoppingList {...common} setChecked={fam.setChecked} />}
         {tab === "plan" && <MealPlan {...common} />}
-        {tab === "recipes" && <Recipes data={data} userId={userId} onChanged={fam.reloadAll} openAdd={common.openAdd} onFill={(t) => setFill(t)} goTo={(t) => { setTab(t); window.scrollTo(0, 0); }} />}
-        {tab === "vote" && <Voting {...common} />}
+        {tab === "recipes" && <Recipes data={data} userId={userId} onChanged={fam.reloadAll} openAdd={common.openAdd} onFill={(t) => setFill(t)} goTo={goTo} />}
+        {tab === "vote" && <Voting data={data} userId={userId} onChanged={fam.reloadAll} goTo={goTo} />}
         {tab === "settings" && <Settings data={data} userId={userId} onChanged={fam.reloadAll} />}
       </div>
 
@@ -88,8 +87,8 @@ function Main({ userId, sharedUrl, clearShared }: { userId: string; sharedUrl?: 
         <div className="tabs-inner">
           {tabBtn("list", <IconCart />)}
           {tabBtn("plan", <IconCalendar />)}
-          {tabBtn("recipes", <IconBook />)}
-          {tabBtn("vote", <IconVote />, pendingVotes)}
+          {tabBtn("recipes", <IconBook />, openSuggestions)}
+          {tabBtn("vote", <IconVote />)}
           {tabBtn("settings", <IconGear />)}
         </div>
       </nav>
@@ -101,7 +100,7 @@ function Main({ userId, sharedUrl, clearShared }: { userId: string; sharedUrl?: 
           initialUrl={fill ? undefined : sharedUrl}
           fill={fill ?? undefined}
           onClose={() => { setAdding(false); setFill(null); clearShared(); }}
-          onSaved={(where) => { setAdding(false); setFill(null); clearShared(); fam.reloadAll(); if (!fill) setTab(where === "voting" ? "vote" : where === "planned" ? "plan" : "recipes"); }}
+          onSaved={(where) => { setAdding(false); setFill(null); clearShared(); fam.reloadAll(); if (!fill) setTab(where === "planned" ? "plan" : "recipes"); }}
         />
       )}
     </>
