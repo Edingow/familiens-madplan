@@ -89,11 +89,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (which === "wolt-items") {
     const slug = String(req.query.slug || "");
     const base = `https://consumer-api.wolt.com/consumer-api/consumer-assortment/v1/venues/slug/${slug}/assortment`;
-    const tries = [`${base}/items/search?q=${encodeURIComponent(q)}&language=da`, `${base}/search?q=${encodeURIComponent(q)}&language=da`, `${base}?language=da`];
+    const enc = encodeURIComponent(q);
+    const tries: [string, string, string?][] = [
+      ["A", `${base}/items/search?language=da`, JSON.stringify({ q })],
+      ["B", `${base}/search?language=da`, JSON.stringify({ q })],
+      ["C", `${base}/items/search?language=da&q=${enc}`],
+      ["D", `${base}/items?language=da&q=${enc}`],
+      ["E", `https://consumer-api.wolt.com/consumer-api/consumer-assortment/v1/venues/slug/${slug}/search?language=da&q=${enc}`],
+      ["F", `https://restaurant-api.wolt.com/v1/pages/venue/${slug}/search?q=${enc}`],
+    ];
     out.wolt = [];
-    for (const t of tries) {
-      const s = await get(t, { headers: { platform: "Web", "app-language": "da" } });
-      (out.wolt as unknown[]).push({ url: t, status: s.status, body: shape(s.json) ?? s.text.slice(0, 300) });
+    for (const [tag, t, body] of tries) {
+      const s = await get(t, { method: body ? "POST" : "GET", body, headers: { platform: "Web", "app-language": "da", "content-type": "application/json" } });
+      (out.wolt as unknown[]).push({ tag, status: s.status, body: shape(s.json) ?? s.text.slice(0, 200) });
     }
   }
   if (req.query.format === "lines") {
