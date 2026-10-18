@@ -52,7 +52,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       for (const m of js.text.matchAll(/.{0,160}F9VBJLR1BK.{0,220}/g)) hits.push(`${s.split("/").pop()}: ${m[0]}`);
       for (const m of js.text.matchAll(/.{0,80}(algolia|apiKey|searchKey).{0,120}/gi)) if (hits.length < 40) hits.push(`${s.split("/").pop()}: ${m[0]}`);
     }
-    out.bilka = { home: home.status, scripts: scripts.length, inlineHits: [...home.text.matchAll(/.{0,120}F9VBJLR1BK.{0,200}/g)].map((m) => m[0]).slice(0, 5), hits: hits.slice(0, 40) };
+    const vals: string[] = [];
+    for (const s of scripts.slice(0, 25)) {
+      const js = await get(s);
+      for (const m of js.text.matchAll(/(NUXT_ENV_ALGOLIA_[A-Z_]+|apiKey|searchKey)\s*[:=]\s*"([^"]{8,80})"/g)) vals.push(`${m[1]}=${m[2]}`);
+    }
+    const tests: string[] = [];
+    for (const v of [...new Set(vals)]) {
+      const key = v.split("=")[1];
+      if (!/^[0-9a-f]{32}$/i.test(key)) continue;
+      const t = await get("https://F9VBJLR1BK-dsn.algolia.net/1/indexes/prod_BILKATOGO_PRODUCTS/query", { method: "POST", headers: { "x-algolia-application-id": "F9VBJLR1BK", "x-algolia-api-key": key, "content-type": "application/json" }, body: JSON.stringify({ params: "query=m%C3%A6lk&hitsPerPage=1" }) });
+      tests.push(`${key}: ${t.status} hits=${t.json?.nbHits}`);
+    }
+    out.bilka = { home: home.status, scripts: scripts.length, values: [...new Set(vals)], tests, hitCount: hits.length };
   }
   if (which === "algolia") {
     const key = String(req.query.key || ""), index = String(req.query.index || "prod_BILKATOGO_PRODUCTS");
