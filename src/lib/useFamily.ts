@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase";
-import type { Dish, Extra, Family, Member, PlanReview, Recipe, Vote } from "./types";
+import type { Dish, Extra, Family, Member, PlanReview, Recipe, ShoppingTemplate, Vote } from "./types";
 
 export interface FamilyData {
   family: Family | null;
@@ -10,11 +10,12 @@ export interface FamilyData {
   recipes: Recipe[];
   votes: Vote[];
   reviews: PlanReview[];
+  templates: ShoppingTemplate[];
   extras: Extra[];
   checks: Set<string>;
 }
 
-const EMPTY: FamilyData = { family: null, me: null, members: [], dishes: [], recipes: [], votes: [], reviews: [], extras: [], checks: new Set() };
+const EMPTY: FamilyData = { family: null, me: null, members: [], dishes: [], recipes: [], votes: [], reviews: [], templates: [], extras: [], checks: new Set() };
 const CACHE = "madplan-cache-v2";
 const QUEUE = "madplan-checks-queue-v1";
 
@@ -79,6 +80,10 @@ export function useFamily(userId: string | null) {
     const { data: reviews } = await supabase.from("plan_reviews").select("*");
     if (reviews) update({ reviews: reviews as PlanReview[] });
   }, [update]);
+  const loadTemplates = useCallback(async () => {
+    const { data: templates } = await supabase.from("shopping_templates").select("*").order("created_at");
+    if (templates) update({ templates: templates as ShoppingTemplate[] });
+  }, [update]);
   const loadExtras = useCallback(async () => {
     const { data: extras } = await supabase.from("extras").select("*").order("created_at");
     if (extras) update({ extras: extras as Extra[] });
@@ -95,10 +100,10 @@ export function useFamily(userId: string | null) {
   const reloadAll = useCallback(async () => {
     try {
       const me = await loadMembership();
-      if (me) await Promise.all([loadDishes(), loadRecipes(), loadVotes(), loadReviews(), loadExtras(), loadChecks()]);
+      if (me) await Promise.all([loadDishes(), loadRecipes(), loadVotes(), loadReviews(), loadTemplates(), loadExtras(), loadChecks()]);
     } catch { /* uden net: vis det gemte */ }
     finally { setLoading(false); }
-  }, [loadMembership, loadDishes, loadRecipes, loadVotes, loadReviews, loadExtras, loadChecks]);
+  }, [loadMembership, loadDishes, loadRecipes, loadVotes, loadReviews, loadTemplates, loadExtras, loadChecks]);
 
   const flushQueue = useCallback(async () => {
     const q = loadQueue();
@@ -123,6 +128,7 @@ export function useFamily(userId: string | null) {
       .channel("family")
       .on("postgres_changes", { event: "*", schema: "public", table: "dishes" }, () => debounce("d", loadDishes))
       .on("postgres_changes", { event: "*", schema: "public", table: "recipes" }, () => debounce("r", loadRecipes))
+      .on("postgres_changes", { event: "*", schema: "public", table: "shopping_templates" }, () => debounce("t", loadTemplates))
       .on("postgres_changes", { event: "*", schema: "public", table: "plan_reviews" }, () => debounce("pr", loadReviews))
       .on("postgres_changes", { event: "*", schema: "public", table: "votes" }, () => debounce("v", loadVotes))
       .on("postgres_changes", { event: "*", schema: "public", table: "extras" }, () => debounce("x", loadExtras))
@@ -143,7 +149,7 @@ export function useFamily(userId: string | null) {
       document.removeEventListener("visibilitychange", visible);
       Object.values(timers).forEach(clearTimeout);
     };
-  }, [userId, reloadAll, flushQueue, loadDishes, loadRecipes, loadVotes, loadReviews, loadExtras, loadChecks, loadMembership]);
+  }, [userId, reloadAll, flushQueue, loadDishes, loadRecipes, loadVotes, loadReviews, loadTemplates, loadExtras, loadChecks, loadMembership]);
 
   /** Flueben virker også uden net og sendes, når der er forbindelse igen. */
   const setChecked = useCallback(async (key: string, on: boolean) => {

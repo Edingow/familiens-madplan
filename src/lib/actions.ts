@@ -12,6 +12,7 @@ export async function planRecipe(recipe: Recipe, userId: string, opts: { status:
     image: recipe.image,
     note: recipe.note,
     servings_base: recipe.servings_base,
+    kcal_per_serving: recipe.kcal_per_serving,
     servings: opts.servings ?? recipe.servings_base,
     items: recipe.items.map(({ off: _off, ...i }) => i),
     status: opts.status,

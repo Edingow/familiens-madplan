@@ -1,10 +1,12 @@
 import { useState } from "react";
 import type { FillTarget } from "../components/AddDish";
+import { RecipeEditor } from "../components/RecipeEditor";
 import { planRecipe } from "../lib/actions";
 import { errorText, supabase } from "../lib/supabase";
 import type { Recipe } from "../lib/types";
 import type { FamilyData } from "../lib/useFamily";
 import { dayLabel, hostOf, nextDays } from "../lib/util";
+import { fmt } from "../lib/merge";
 
 interface Props {
   data: FamilyData;
@@ -17,6 +19,12 @@ interface Props {
 
 export function Recipes({ data, userId, onChanged, openAdd, onFill, goTo }: Props) {
   const [query, setQuery] = useState("");
+  const [editing, setEditing] = useState<Recipe | "new" | null>(null);
+  const editor = editing && (
+    <RecipeEditor data={data} userId={userId} recipe={editing === "new" ? undefined : editing}
+      onClose={() => setEditing(null)} onSaved={() => { setEditing(null); onChanged(); }} />
+  );
+  const card = (r: Recipe) => <RecipeCard key={r.id} recipe={r} data={data} userId={userId} onChanged={onChanged} onFill={onFill} goTo={goTo} onEdit={() => setEditing(r)} />;
   const q = query.trim().toLowerCase();
   const matches = data.recipes.filter((r) => !q || r.title.toLowerCase().includes(q) || r.items.some((i) => i.name.includes(q)));
   const suggestions = matches.filter((r) => r.suggested);
@@ -26,15 +34,20 @@ export function Recipes({ data, userId, onChanged, openAdd, onFill, goTo }: Prop
     return (
       <div className="empty">
         <h2>Ingen opskrifter endnu</h2>
-        <p>Gem opskrifter fra links, tekst eller fotos af kogebøger. Herfra lægges de på madplanen, igen og igen. Børnenes forslag kommer også her.</p>
-        <button className="btn" onClick={openAdd}>Tilføj opskrift</button>
+        <p>Gem opskrifter fra links, tekst eller fotos af kogebøger, eller skriv jeres egne. Herfra lægges de på madplanen, igen og igen. Børnenes forslag kommer også her.</p>
+        <div className="row">
+          <button className="btn" onClick={openAdd}>Tilføj opskrift</button>
+          <button className="btn ghost" onClick={() => setEditing("new")}>Skriv egen opskrift</button>
+        </div>
+        {editor}
       </div>
     );
   }
 
   return (
     <>
-      <div style={{ marginTop: 16 }}>
+      <div className="row" style={{ marginTop: 16, flexWrap: "nowrap" }}>
+        <button className="btn ghost small" style={{ flex: "none" }} onClick={() => setEditing("new")}>Skriv egen</button>
         <input id="search" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Søg i ${data.recipes.length} opskrifter eller ingredienser`} autoComplete="off" />
       </div>
       {!matches.length && <p className="muted" style={{ marginTop: 16 }}>Ingen opskrifter matcher "{query}".</p>}
@@ -42,21 +55,22 @@ export function Recipes({ data, userId, onChanged, openAdd, onFill, goTo }: Prop
         <div className="section">
           <span className="sign">Forslag<small>{suggestions.length}</small></span>
           <div style={{ marginTop: 8 }}>
-            {suggestions.map((r) => <RecipeCard key={r.id} recipe={r} data={data} userId={userId} onChanged={onChanged} onFill={onFill} goTo={goTo} />)}
+            {suggestions.map(card)}
           </div>
         </div>
       )}
       <div className="section">
-        {list.map((r) => <RecipeCard key={r.id} recipe={r} data={data} userId={userId} onChanged={onChanged} onFill={onFill} goTo={goTo} />)}
+        {list.map(card)}
       </div>
+      {editor}
     </>
   );
 }
 
-function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo }: { recipe: Recipe } & Omit<Props, "openAdd">) {
+function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo, onEdit }: { recipe: Recipe; onEdit: () => void } & Omit<Props, "openAdd">) {
   const isParent = data.me?.role === "parent";
   const canEdit = isParent || r.created_by === userId;
-  const [panel, setPanel] = useState<"none" | "plan" | "items" | "delete">("none");
+  const [panel, setPanel] = useState<"none" | "plan" | "items" | "steps" | "delete">("none");
   const [day, setDay] = useState("");
   const [servings, setServings] = useState<number | null>(r.servings_base);
   const [busy, setBusy] = useState(false);
@@ -81,6 +95,7 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo }: { reci
           <span className="muted small">
             {[r.items.length ? `${r.items.length} ingredienser` : "Ingen ingredienser endnu", r.servings_base && `${r.servings_base} pers.`, author].filter(Boolean).join(" · ")}
           </span>
+          {r.kcal_per_serving && <span className="small"><b>Ca. {r.kcal_per_serving} kcal</b> pr. person</span>}
           {r.url && <a className="small" href={r.url} target="_blank" rel="noopener noreferrer">{hostOf(r.url)}</a>}
           {(onPlan.length > 0 || r.suggested) && (
             <div className="row" style={{ marginTop: 2 }}>
@@ -100,6 +115,7 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo }: { reci
           })}>Ikke nu</button>
         )}
         {r.items.length > 0 && <button className="link" onClick={() => setPanel(panel === "items" ? "none" : "items")}>{panel === "items" ? "Skjul" : "Ingredienser"}</button>}
+        {r.instructions && <button className="link" onClick={() => setPanel(panel === "steps" ? "none" : "steps")}>{panel === "steps" ? "Skjul" : "Fremgangsmåde"}</button>}
         {canEdit && r.items.length === 0 && <button className="btn ghost small" onClick={() => onFill({ kind: "recipe", recipe: r })}>Hent ingredienser</button>}
         {canEdit && r.items.length > 0 && r.url && <button className="link" onClick={() => onFill({ kind: "recipe", recipe: r })}>Hent igen fra linket</button>}
       </div>
@@ -131,15 +147,21 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo }: { reci
       )}
 
       {panel === "items" && (
-        <div className="chips">
-          {r.items.map((it, i) => <span key={i} className="chip" style={{ paddingRight: 10 }}>{it.name}</span>)}
-        </div>
+        <ul className="small" style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 2 }}>
+          {r.items.map((it, i) => <li key={i}>{[it.qty != null ? fmt(it.qty) : "", it.unit, it.name].filter(Boolean).join(" ")}</li>)}
+        </ul>
+      )}
+      {panel === "steps" && r.instructions && (
+        <div className="small" style={{ whiteSpace: "pre-line", lineHeight: 1.5 }}>{r.instructions}</div>
       )}
 
       {err && <p className="status err">{err}</p>}
 
       {canEdit && panel !== "delete" && (
-        <div className="row end"><button className="link" onClick={() => setPanel("delete")}>Slet opskrift</button></div>
+        <div className="row end">
+          <button className="link" onClick={onEdit}>Ret</button>
+          <button className="link" onClick={() => setPanel("delete")}>Slet opskrift</button>
+        </div>
       )}
       {panel === "delete" && (
         <div className="row end">

@@ -62,10 +62,11 @@ export function AddDish({ data, userId, initialUrl, fill, onClose, onSaved }: Pr
 
   async function saveFill() {
     const items = recipe!.items;
-    const base = { items, servings_base: servings };
+    const base = { items, servings_base: servings, kcal_per_serving: recipe!.kcal_per_serving };
+    const recipeExtra = recipe!.instructions ? { instructions: recipe!.instructions } : {};
     if (fill!.kind === "recipe") {
       const r = fill!.recipe;
-      const { error } = await supabase.from("recipes").update({ ...base, image: recipe!.image || r.image, url: r.url || url.trim() || null }).eq("id", r.id);
+      const { error } = await supabase.from("recipes").update({ ...base, ...recipeExtra, image: recipe!.image || r.image, url: r.url || url.trim() || null }).eq("id", r.id);
       if (error) throw error;
       onSaved("recipes");
       return;
@@ -73,12 +74,12 @@ export function AddDish({ data, userId, initialUrl, fill, onClose, onSaved }: Pr
     const d = fill!.dish;
     let recipeId = d.recipe_id;
     if (recipeId) {
-      const { error } = await supabase.from("recipes").update(base).eq("id", recipeId);
+      const { error } = await supabase.from("recipes").update({ ...base, ...recipeExtra }).eq("id", recipeId);
       if (error) throw error;
     } else {
       const { data: row, error } = await supabase.from("recipes").insert({
         family_id: d.family_id, title: d.title, url: d.url || url.trim() || null, image: d.image || recipe!.image,
-        note: d.note, created_by: userId, ...base,
+        note: d.note, created_by: userId, ...base, ...recipeExtra,
       }).select("id").single();
       if (error) throw error;
       recipeId = row.id;
@@ -112,7 +113,7 @@ export function AddDish({ data, userId, initialUrl, fill, onClose, onSaved }: Pr
       const { data: row, error } = await supabase.from("recipes").insert({
         family_id: data.family!.id, title: t, url: url.trim() || null, image: recipe?.image ?? null,
         note: note.trim() || null, servings_base: servings, items: recipe?.items ?? [], created_by: userId,
-        suggested: !isParent,
+        suggested: !isParent, kcal_per_serving: recipe?.kcal_per_serving ?? null, instructions: recipe?.instructions ?? null,
       }).select("*").single();
       if (error) throw error;
       if (isParent && dest === "planned") { await planRecipe(row as Recipe, userId, { status: "planned", date: day, servings }); onSaved("planned"); }
@@ -209,7 +210,9 @@ export function AddDish({ data, userId, initialUrl, fill, onClose, onSaved }: Pr
                 </span>
               ))}
             </div>
-            <p className="muted small" style={{ margin: 0 }}>Tryk × for at fjerne noget, der er læst forkert.</p>
+            <p className="muted small" style={{ margin: 0 }}>
+              {recipe.kcal_per_serving ? `Ca. ${recipe.kcal_per_serving} kcal pr. person. ` : ""}Tryk × for at fjerne noget, der er læst forkert.
+            </p>
           </div>
         )}
 

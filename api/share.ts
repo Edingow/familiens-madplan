@@ -23,7 +23,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   catch (e) {
     // Siden kunne ikke læses: gem linket alligevel, så ingredienserne kan hentes senere i appen.
     if (!(e instanceof InputError)) console.error(e);
-    r = { title: null, servings: null, image: null, items: [] };
+    r = { title: null, servings: null, image: null, items: [], kcal_per_serving: null, instructions: null };
   }
 
   const title = r.title || u.hostname.replace(/^www\./, "");
@@ -32,14 +32,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const save = await fetch(`${supa}/rest/v1/rpc/save_shared_recipe`, {
     method: "POST",
     headers: { "content-type": "application/json", apikey: anon!, authorization: `Bearer ${anon}` },
-    body: JSON.stringify({ key, title, url: u.toString(), image: r.image, servings: r.servings, items: r.items }),
+    body: JSON.stringify({ key, title, url: u.toString(), image: r.image, servings: r.servings, items: r.items, kcal: r.kcal_per_serving, instructions: r.instructions }),
   });
   if (!save.ok) {
     const t = await save.text();
     return reply(save.status === 400 && /delekode/i.test(t) ? 401 : 500, /delekode/i.test(t) ? "Delekoden virker ikke. Lav genvejen igen fra Familie i appen." : "Opskriften kunne ikke gemmes. Prøv igen.");
   }
   reply(200, r.items.length
-    ? `Gemt i Opskrifter: ${title} (${r.items.length} ingredienser)`
+    ? `Gemt i Opskrifter: ${title} (${r.items.length} ingredienser${r.kcal_per_serving ? `, ca. ${r.kcal_per_serving} kcal pr. person` : ""})`
     : `Linket er gemt i Opskrifter: ${title}. Ingredienserne kunne ikke læses, så tryk Hent ingredienser i appen.`);
 }
 

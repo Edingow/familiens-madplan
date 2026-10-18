@@ -35,6 +35,8 @@ export interface ParsedRecipe {
   servings: number | null;
   image: string | null;
   items: Ingredient[];
+  kcal_per_serving: number | null;
+  instructions: string | null;
 }
 
 export interface Product {
@@ -75,6 +77,8 @@ export interface Recipe {
   servings_base: number | null;
   items: Ingredient[];
   suggested: boolean;
+  kcal_per_serving: number | null;
+  instructions: string | null;
   created_by: string | null;
   created_at: string;
 }
@@ -103,6 +107,21 @@ export interface Vote {
   value: 1 | -1;
   comment: string | null;
   suggestion_recipe_id: string | null;
+}
+
+export interface TemplateItem {
+  name: string;
+  qty: number | null;
+  unit: string;
+  category: Category;
+}
+
+export interface ShoppingTemplate {
+  id: string;
+  family_id: string;
+  name: string;
+  items: TemplateItem[];
+  created_at: string;
 }
 
 export interface PlanReview {

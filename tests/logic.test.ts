@@ -58,6 +58,15 @@ describe("opskriftssider", () => {
     expect(r.servings).toBe(4);
     expect(r.image).toBe("https://x.dk/c.jpg");
     expect(r.ingredients).toEqual(["500 g hakket oksekød", "2 & et halvt løg", "1 dåse flåede tomater"]);
+    expect(r.kcal).toBeNull();
+  });
+  it("læser kalorier og fremgangsmåde fra opskriftsdata", () => {
+    const html = `<script type="application/ld+json">{"@type":"Recipe","name":"Suppe","recipeIngredient":["1 løg"],
+      "nutrition":{"@type":"NutritionInformation","calories":"512 kcal"},
+      "recipeInstructions":[{"@type":"HowToSection","itemListElement":[{"@type":"HowToStep","text":"Hak løget."},{"@type":"HowToStep","text":"Kog i 20 min."}]}]}</script>`;
+    const r = extractJsonLdRecipe(html)!;
+    expect(r.kcal).toBe(512);
+    expect(r.instructions).toBe("1. Hak løget.\n2. Kog i 20 min.");
   });
   it("giver null uden opskrift og fjerner scripts fra teksten", () => {
     const html = `<script>alert(1)</script><nav>Menu</nav><p>200 g smør</p><p>2 æg</p>`;
@@ -96,7 +105,7 @@ describe("serverfunktion /api/recipe", () => {
     const res: any = { status(s: number) { status = s; return res; }, json(j: unknown) { out = j; return res; } };
     await handler({ method: "POST", headers: { authorization: "Bearer t" }, body: { url: "https://opskrift.dk/pasta" } } as any, res);
     expect(status).toBe(200);
-    expect(out).toEqual({ title: "Pasta", servings: 2, image: null, items: [{ name: "pasta", qty: 200, unit: "g", category: "kolonial", basic: false }] });
+    expect(out).toEqual({ title: "Pasta", servings: 2, image: null, items: [{ name: "pasta", qty: 200, unit: "g", category: "kolonial", basic: false }], kcal_per_serving: null, instructions: null });
     expect(calls.length).toBe(3);
   });
   it("afviser uden login og ved interne adresser", async () => {

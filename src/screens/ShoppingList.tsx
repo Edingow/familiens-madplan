@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import { IconCamera, IconCheck } from "../components/Icons";
+import { Templates } from "../components/Templates";
 import { buildShoppingList, checkKey, guessCategory, parseLine } from "../lib/merge";
 import { errorText, supabase } from "../lib/supabase";
 import { CATEGORY_NAMES, DEFAULT_ORDER, type Category, type Product } from "../lib/types";
@@ -19,6 +20,7 @@ export function ShoppingList({ data, userId, setChecked, onChanged, openAdd }: P
   const [hideDone, setHideDone] = useState(() => { try { return localStorage.getItem("hide-done") === "1"; } catch { return false; } });
   const [draft, setDraft] = useState("");
   const [scanning, setScanning] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [msg, setMsg] = useState<{ text: string; err?: boolean } | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -79,12 +81,15 @@ export function ShoppingList({ data, userId, setChecked, onChanged, openAdd }: P
           </label>
         </div>
       )}
+      <div className="row" style={{ marginTop: 10 }}>
+        <button className="btn ghost small" onClick={() => setTemplatesOpen(true)}>Faste varer</button>
       {items.length > 0 && (
-        <div className="row" style={{ marginTop: 10 }}>
+        <>
           {doneCount > 0 && <button className="btn small" disabled={clearing} onClick={() => clearList(false)}>Ryd købte varer ({doneCount})</button>}
           {isParent && !confirmClear && <button className="btn ghost small" disabled={clearing} onClick={() => setConfirmClear(true)}>Ryd hele listen</button>}
-        </div>
+        </>
       )}
+      </div>
       {confirmClear && (
         <div className="card" style={{ marginTop: 10 }}>
           <p style={{ margin: 0 }}>Alle varer fjernes fra listen for hele familien. Retterne bliver liggende på madplanen.</p>
@@ -157,6 +162,10 @@ export function ShoppingList({ data, userId, setChecked, onChanged, openAdd }: P
         </div>
       )}
 
+      {templatesOpen && (
+        <Templates data={data} userId={userId} onClose={() => setTemplatesOpen(false)}
+          onAdded={(n) => { setTemplatesOpen(false); setMsg({ text: `${n} faste ${n === 1 ? "vare" : "varer"} er lagt på listen.` }); onChanged(); }} />
+      )}
       {scanning && <Suspense fallback={null}><Scanner onClose={() => setScanning(false)} onProduct={onProduct} /></Suspense>}
     </>
   );

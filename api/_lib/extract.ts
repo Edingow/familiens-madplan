@@ -15,12 +15,16 @@ export interface Extracted {
   image: string | null;
   /** Tom, hvis der ikke blev fundet ingredienser. */
   items: Ingredient[];
+  kcal_per_serving: number | null;
+  instructions: string | null;
 }
 
 interface ClaudeRecipe {
   found: boolean;
   title: string;
   servings: number | null;
+  kcal_per_serving?: number | null;
+  instructions?: string | null;
   items: { name: string; qty: number | null; unit: string; category: string; basic: boolean }[];
 }
 
@@ -76,6 +80,8 @@ export async function extractRecipe(input: { url?: string; text?: string; image?
   let image: string | null = null;
   let pageTitle: string | null = null;
   let servingsHint: number | null = null;
+  let kcalHint: number | null = null;
+  let instructionsHint: string | null = null;
 
   if (input.url) {
     const u = safeUrl(input.url);
@@ -93,11 +99,15 @@ export async function extractRecipe(input: { url?: string; text?: string; image?
     pageTitle = structured?.title ?? metaContent(html, "og:title");
     if (structured) {
       servingsHint = structured.servings;
-      prompt = `Opskrift: ${structured.title ?? ""}\nAntal: ${structured.servings ?? "ukendt"}\nIngredienser:\n${structured.ingredients.join("\n")}`;
+      kcalHint = structured.kcal;
+      instructionsHint = structured.instructions;
+      prompt = `Opskrift: ${structured.title ?? ""}\nAntal: ${structured.servings ?? "ukendt"}\n` +
+        (structured.kcal ? `Kalorier pr. portion ifølge siden: ${structured.kcal}\n` : "") +
+        `Ingredienser:\n${structured.ingredients.join("\n")}\n\n(Fremgangsmåden er allerede gemt, så sæt instructions til null.)`;
     } else {
       const desc = metaContent(html, "og:description") ?? metaContent(html, "description") ?? "";
       const body = SOCIAL.test(u.hostname) ? "" : pageText(html);
-      if (!desc && !body) return { title: pageTitle, servings: null, image, items: [] };
+      if (!desc && !body) return { title: pageTitle, servings: null, image, items: [], kcal_per_serving: null, instructions: null };
       prompt = `Tekst fra ${u.hostname} (kan være en billedtekst fra sociale medier eller en side med menuer og reklamer):\nTitel: ${pageTitle ?? ""}\n${desc}\n\n${body}`;
     }
   } else if (input.text && input.text.trim().length > 5) {
@@ -109,7 +119,14 @@ export async function extractRecipe(input: { url?: string; text?: string; image?
   }
 
   const r = await askClaude(prompt, input.image);
-  return { title: r.title || pageTitle, servings: r.servings ?? servingsHint, image, items: r.items };
+  return {
+    title: r.title || pageTitle,
+    servings: r.servings ?? servingsHint,
+    image,
+    items: r.items,
+    kcal_per_serving: kcalHint ?? r.kcal_per_serving,
+    instructions: instructionsHint ?? r.instructions,
+  };
 }
 
 async function askClaude(prompt: string, image?: ImageInput | null): Promise<Extracted> {
@@ -129,5 +146,7 @@ async function askClaude(prompt: string, image?: ImageInput | null): Promise<Ext
       category: asCategory(i.category),
       basic: !!i.basic,
     }));
-  return { title: r.title?.trim() || null, servings: r.servings ?? null, image: null, items };
+  const kcal = typeof r.kcal_per_serving === "number" && r.kcal_per_serving > 20 && r.kcal_per_serving < 5000 ? Math.round(r.kcal_per_serving) : null;
+  const instructions = typeof r.instructions === "string" && r.instructions.trim() ? r.instructions.trim().slice(0, 8000) : null;
+  return { title: r.title?.trim() || null, servings: r.servings ?? null, image: null, items, kcal_per_serving: items.length ? kcal : null, instructions };
 }

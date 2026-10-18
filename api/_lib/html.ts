@@ -5,6 +5,9 @@ export interface PageRecipe {
   servings: number | null;
   image: string | null;
   ingredients: string[];
+  /** Kalorier pr. portion, hvis siden selv oplyser det. */
+  kcal: number | null;
+  instructions: string | null;
 }
 
 const decode = (s: string) =>
@@ -39,6 +42,33 @@ function parseYield(y: unknown): number | null {
   return null;
 }
 
+function kcalOf(n: any): number | null {
+  const c = n?.calories ?? n?.energy;
+  const m = typeof c === "number" ? [String(c)] : typeof c === "string" ? c.replace(",", ".").match(/\d+(\.\d+)?/) : null;
+  if (!m) return null;
+  let v = Number(m[0]);
+  if (typeof c === "string" && /kj/i.test(c) && !/kcal/i.test(c)) v = v / 4.184;
+  return v > 20 && v < 5000 ? Math.round(v) : null;
+}
+
+function stepsOf(x: any): string[] {
+  if (!x) return [];
+  if (typeof x === "string") return x.split(/\n+/).map((t) => t.trim()).filter(Boolean);
+  if (Array.isArray(x)) return x.flatMap(stepsOf);
+  if (typeof x === "object") {
+    if (x.itemListElement) return stepsOf(x.itemListElement);
+    if (typeof x.text === "string") return [x.text];
+    if (typeof x.name === "string") return [x.name];
+  }
+  return [];
+}
+
+function instructionsOf(x: any): string | null {
+  const steps = stepsOf(x).map((t) => decode(t).replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim()).filter(Boolean);
+  if (!steps.length) return null;
+  return steps.map((t, i) => `${i + 1}. ${t}`).join("\n").slice(0, 8000);
+}
+
 function imageOf(img: unknown): string | null {
   if (!img) return null;
   if (typeof img === "string") return img;
@@ -65,6 +95,8 @@ export function extractJsonLdRecipe(html: string): PageRecipe | null {
       servings: parseYield(r.recipeYield),
       image: imageOf(r.image),
       ingredients,
+      kcal: kcalOf(r.nutrition),
+      instructions: instructionsOf(r.recipeInstructions),
     };
   }
   return null;
