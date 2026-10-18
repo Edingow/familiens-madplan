@@ -81,6 +81,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.query.algolia) { hdr["x-algolia-application-id"] = "F9VBJLR1BK"; hdr["x-algolia-api-key"] = String(req.query.algolia); }
     const s = await get(url, { method: post ? "POST" : "GET", body: post, headers: hdr });
     const grep = req.query.grep ? new RegExp(`.{0,150}${String(req.query.grep)}.{0,250}`, "g") : null;
+    if (req.query.format === "hit") {
+      const h = s.json?.hits?.[0] ?? s.json?.items?.[0] ?? s.json;
+      if (h && typeof h === "object") delete h._highlightResult;
+      res.setHeader("content-type", "text/plain; charset=utf-8");
+      return res.status(200).send(`STATUS ${s.status} KEYS ${h && typeof h === "object" ? Object.keys(h).join(",") : ""}\n${JSON.stringify(h).slice(0, 2500)}`);
+    }
     out.fetch = { status: s.status, body: s.json ? shape(s.json) : grep ? [...s.text.matchAll(grep)].map((m) => m[0]).slice(0, 15) : s.text.slice(0, 1500) };
   }
   if (which === "wolt-venues") {
