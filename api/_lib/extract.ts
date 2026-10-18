@@ -62,7 +62,9 @@ export async function fetchPage(u: URL): Promise<{ html: string; viaReader: bool
     const html = await tryFetch(u.toString(), { ...common, "user-agent": ua });
     if (html) return { html, viaReader: false };
   }
-  // Reserve: Jina Reader henter siden for os og returnerer dens tekst.
+  // Reserve: Jina Reader henter siden for os. Som HTML får vi også billede og opskriftsdata med.
+  const html = await tryFetch(`https://r.jina.ai/${u.toString()}`, { accept: "text/html", "x-return-format": "html" });
+  if (html && html.trim().length > 200) return { html, viaReader: /<html|<head|<meta/i.test(html) ? false : true };
   const text = await tryFetch(`https://r.jina.ai/${u.toString()}`, { accept: "text/plain", "x-return-format": "text" });
   if (text && text.trim().length > 200) return { html: text, viaReader: true };
   throw new Error("Siden kunne ikke hentes");

@@ -101,6 +101,7 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo }: { reci
         )}
         {r.items.length > 0 && <button className="link" onClick={() => setPanel(panel === "items" ? "none" : "items")}>{panel === "items" ? "Skjul" : "Ingredienser"}</button>}
         {canEdit && r.items.length === 0 && <button className="btn ghost small" onClick={() => onFill({ kind: "recipe", recipe: r })}>Hent ingredienser</button>}
+        {canEdit && r.items.length > 0 && r.url && <button className="link" onClick={() => onFill({ kind: "recipe", recipe: r })}>Hent igen fra linket</button>}
       </div>
 
       {panel === "plan" && (

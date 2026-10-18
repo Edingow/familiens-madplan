@@ -65,7 +65,7 @@ export function AddDish({ data, userId, initialUrl, fill, onClose, onSaved }: Pr
     const base = { items, servings_base: servings };
     if (fill!.kind === "recipe") {
       const r = fill!.recipe;
-      const { error } = await supabase.from("recipes").update({ ...base, image: r.image || recipe!.image, url: r.url || url.trim() || null }).eq("id", r.id);
+      const { error } = await supabase.from("recipes").update({ ...base, image: recipe!.image || r.image, url: r.url || url.trim() || null }).eq("id", r.id);
       if (error) throw error;
       onSaved("recipes");
       return;

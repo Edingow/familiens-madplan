@@ -124,13 +124,31 @@ describe("hentning af blokerede sider", () => {
         return new Response(JSON.stringify({ content: [{ type: "tool_use", input: { found: true, title: "Marry me kyllingesuppe", servings: 4, items: [{ name: "kyllingebryst", qty: 500, unit: "g", category: "kod", basic: false }] } }] }));
       }
       tried.push(u.startsWith("https://r.jina.ai/") ? "reader" : (init?.headers?.["user-agent"] || "").slice(0, 12));
+      if (u.startsWith("https://r.jina.ai/") && init?.headers?.["x-return-format"] === "html") return new Response("", { status: 502 });
       if (u.startsWith("https://r.jina.ai/")) return new Response("Title: Marry me\n" + "Ingredienser\n500 g kyllingebryst\n1 løg\n".repeat(10));
       return new Response("Forbidden", { status: 403 });
     }));
     const { extractRecipe } = await import("../api/_lib/extract");
     const r = await extractRecipe({ url: "https://gourministeriet.dk/one-pot/" });
-    expect(tried).toHaveLength(4);
-    expect(tried[3]).toBe("reader");
+    expect(tried).toHaveLength(5);
+    expect(tried.slice(3)).toEqual(["reader", "reader"]);
     expect(r.items[0].name).toBe("kyllingebryst");
+  });
+});
+
+describe("læsetjeneste med HTML", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("får billede og opskriftsdata med, når læsetjenesten returnerer HTML", async () => {
+    process.env.ANTHROPIC_API_KEY = "k";
+    vi.stubGlobal("fetch", vi.fn(async (url: any) => {
+      const u = String(url);
+      if (u.startsWith("https://api.anthropic.com")) return new Response(JSON.stringify({ content: [{ type: "tool_use", input: { found: true, title: "Suppe", servings: 4, items: [{ name: "løg", qty: 1, unit: "stk", category: "frugt", basic: false }] } }] }));
+      if (u.startsWith("https://r.jina.ai/")) return new Response('<html><head><meta property="og:image" content="https://g.dk/suppe.jpg"></head><body><script type="application/ld+json">{"@type":"Recipe","name":"Suppe","recipeIngredient":["1 løg"]}</script></body></html>');
+      return new Response("Forbidden", { status: 403 });
+    }));
+    const { extractRecipe } = await import("../api/_lib/extract");
+    const r = await extractRecipe({ url: "https://gourministeriet.dk/suppe/" });
+    expect(r.image).toBe("https://g.dk/suppe.jpg");
+    expect(r.items).toHaveLength(1);
   });
 });
