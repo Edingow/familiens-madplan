@@ -75,6 +75,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
     out.algolia = { status: s.status, body: shape(s.json) ?? s.text.slice(0, 500) };
   }
+  if (which === "fetch") {
+    const url = String(req.query.url || ""), post = req.query.post ? String(req.query.post) : undefined;
+    const hdr: Record<string, string> = { "content-type": "application/json" };
+    if (req.query.algolia) { hdr["x-algolia-application-id"] = "F9VBJLR1BK"; hdr["x-algolia-api-key"] = String(req.query.algolia); }
+    const s = await get(url, { method: post ? "POST" : "GET", body: post, headers: hdr });
+    const grep = req.query.grep ? new RegExp(`.{0,150}${String(req.query.grep)}.{0,250}`, "g") : null;
+    out.fetch = { status: s.status, body: s.json ? shape(s.json) : grep ? [...s.text.matchAll(grep)].map((m) => m[0]).slice(0, 15) : s.text.slice(0, 1500) };
+  }
   if (which === "wolt-venues") {
     const lat = Number(req.query.lat || 55.6625), lon = Number(req.query.lon || 12.5139);
     const s = await get("https://restaurant-api.wolt.com/v1/pages/search", {
