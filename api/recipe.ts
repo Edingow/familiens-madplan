@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { claudeStructured, RECIPE_SCHEMA, RECIPE_SYSTEM } from "./_lib/claude";
-import { extractJsonLdRecipe, metaContent, pageText } from "./_lib/html";
-import { BROWSER_UA, fail, readImage, requireUser } from "./_lib/http";
-import { asCategory, type ParsedRecipe } from "../src/lib/types";
+import { claudeStructured, RECIPE_SCHEMA, RECIPE_SYSTEM } from "./_lib/claude.js";
+import { extractJsonLdRecipe, metaContent, pageText } from "./_lib/html.js";
+import { BROWSER_UA, fail, readImage, requireUser } from "./_lib/http.js";
+import { asCategory, type ParsedRecipe } from "../src/lib/types.js";
 
 export const config = { maxDuration: 60 };
 

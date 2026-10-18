@@ -19,7 +19,7 @@ export async function callApi<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
   const json = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(json.error || "Noget gik galt. Prøv igen.");
+  if (!r.ok) throw new Error(json.error || `Serveren svarede med fejl ${r.status}. Prøv igen om lidt.`);
   return json as T;
 }
 

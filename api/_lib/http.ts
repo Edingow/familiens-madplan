@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import type { ImageInput } from "./claude";
+import type { ImageInput } from "./claude.js";
 
 /** Kun familiens egne, indloggede brugere må bruge serverfunktionerne (de koster AI-kald). */
 export async function requireUser(req: VercelRequest, res: VercelResponse): Promise<string | null> {

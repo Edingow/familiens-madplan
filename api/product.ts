@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { claudeStructured, PRODUCT_SCHEMA, PRODUCT_SYSTEM } from "./_lib/claude";
-import { fail, readImage, requireUser } from "./_lib/http";
-import { asCategory, type Product } from "../src/lib/types";
+import { claudeStructured, PRODUCT_SCHEMA, PRODUCT_SYSTEM } from "./_lib/claude.js";
+import { fail, readImage, requireUser } from "./_lib/http.js";
+import { asCategory, type Product } from "../src/lib/types.js";
 
 export const config = { maxDuration: 30 };
 
