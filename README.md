@@ -67,11 +67,9 @@ Hver `env add` beder dig indsætte værdien fra trin 2 og 3. Den sidste kommando
 5. Sæt afdelingerne i den rækkefølge, I går gennem jeres faste supermarked.
 
 ### 6. Gem opskrifter direkte fra Safari, Instagram og TikTok (valgfrit)
-1. I appen: **Familie** → **Vis min genvejsadresse** → **Kopiér adressen**.
-2. Åbn **Genveje** → **+**. Kald genvejen **Gem opskrift**.
-3. Tryk på **i** nederst, slå **Vis i delingsark** til, og vælg **URL'er** og **Tekst**.
-4. Tilføj handlingen **Hent indhold af URL**. Indsæt adressen, sæt **Metode** til **POST**, **Anmodningstekst** til **JSON**, og tilføj feltet `url` med værdien **Genvejsinput**.
-5. Tilføj handlingen **Vis meddelelse** med **Indhold af URL**.
+I appen: **Familie** → **Installér genvejen**. Adressen kopieres, og Genveje åbner. Tryk **Tilføj genvej** og sæt adressen ind, når den spørger.
+
+Den delte genvej sender linket med POST og JSON-feltet `url` til den personlige adresse og viser svaret som en notifikation.
 
 ---
 
