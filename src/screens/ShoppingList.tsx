@@ -82,10 +82,10 @@ export function ShoppingList({ data, userId, setChecked, onChanged, openAdd }: P
         </div>
       )}
       <div className="row" style={{ marginTop: 10 }}>
-        <button className="btn ghost small" onClick={() => setTemplatesOpen(true)}>Faste varer</button>
+        <button className="btn small" onClick={() => setTemplatesOpen(true)}>+ Tilføj indkøbsliste</button>
       {items.length > 0 && (
         <>
-          {doneCount > 0 && <button className="btn small" disabled={clearing} onClick={() => clearList(false)}>Ryd købte varer ({doneCount})</button>}
+          {doneCount > 0 && <button className="btn ghost small" disabled={clearing} onClick={() => clearList(false)}>Ryd købte varer ({doneCount})</button>}
           {isParent && !confirmClear && <button className="btn ghost small" disabled={clearing} onClick={() => setConfirmClear(true)}>Ryd hele listen</button>}
         </>
       )}
@@ -164,7 +164,7 @@ export function ShoppingList({ data, userId, setChecked, onChanged, openAdd }: P
 
       {templatesOpen && (
         <Templates data={data} userId={userId} onClose={() => setTemplatesOpen(false)}
-          onAdded={(n) => { setTemplatesOpen(false); setMsg({ text: `${n} faste ${n === 1 ? "vare" : "varer"} er lagt på listen.` }); onChanged(); }} />
+          onAdded={(n, listName) => { setTemplatesOpen(false); setMsg({ text: `${n} ${n === 1 ? "vare" : "varer"} fra ${listName} er lagt på listen.` }); onChanged(); }} />
       )}
       {scanning && <Suspense fallback={null}><Scanner onClose={() => setScanning(false)} onProduct={onProduct} /></Suspense>}
     </>

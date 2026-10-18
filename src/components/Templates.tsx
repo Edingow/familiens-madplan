@@ -4,14 +4,14 @@ import { errorText, supabase } from "../lib/supabase";
 import type { ShoppingTemplate, TemplateItem } from "../lib/types";
 import type { FamilyData } from "../lib/useFamily";
 
-interface Props { data: FamilyData; userId: string; onClose: () => void; onAdded: (count: number) => void }
+interface Props { data: FamilyData; userId: string; onClose: () => void; onAdded: (count: number, listName: string) => void }
 
 const label = (i: TemplateItem) => [i.qty != null ? fmt(i.qty) : "", i.unit, i.name].filter(Boolean).join(" ");
 
-/** Faste varer: vælg en liste, fravælg det, I ikke mangler, og tilføj resten til indkøbslisten. */
+/** Gemte indkøbslister: vælg en, fravælg det, I ikke mangler, og tilføj resten til indkøbslisten. */
 export function Templates({ data, userId, onClose, onAdded }: Props) {
   const isParent = data.me?.role === "parent";
-  const [openId, setOpenId] = useState<string | null>(data.templates.length === 1 ? data.templates[0].id : null);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<ShoppingTemplate | "new" | null>(null);
   const open = data.templates.find((t) => t.id === openId) ?? null;
 
@@ -19,7 +19,7 @@ export function Templates({ data, userId, onClose, onAdded }: Props) {
     <div className="sheet" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="panel">
         <div className="row" style={{ justifyContent: "space-between" }}>
-          <h2>{editing ? (editing === "new" ? "Ny liste med faste varer" : `Ret ${editing.name}`) : open ? open.name : "Faste varer"}</h2>
+          <h2>{editing ? (editing === "new" ? "Ny indkøbsliste" : `Ret ${editing.name}`) : open ? open.name : "Tilføj indkøbsliste"}</h2>
           <button className="link" onClick={onClose}>Luk</button>
         </div>
 
@@ -28,14 +28,17 @@ export function Templates({ data, userId, onClose, onAdded }: Props) {
             onDone={(id) => { setEditing(null); if (id) setOpenId(id); }} />
         ) : open ? (
           <TemplatePicker key={open.id + ":" + open.items.length} data={data} userId={userId} template={open} isParent={isParent}
-            onBack={data.templates.length > 1 ? () => setOpenId(null) : undefined}
-            onEdit={() => setEditing(open)} onAdded={onAdded} />
+            onBack={() => setOpenId(null)}
+            onEdit={() => setEditing(open)} onAdded={(n) => onAdded(n, open.name)} />
         ) : (
           <div className="stack">
             {data.templates.length === 0 && (
               <p className="muted" style={{ margin: 0 }}>
-                {isParent ? "Lav en liste med de ting, I altid køber, fx mælk, brød og kaffe. Så kan de lægges på indkøbslisten med ét tryk." : "Mor eller far har ikke lavet en liste med faste varer endnu."}
+                {isParent ? "Gem lister med de ting, I ofte køber, fx \"Ugens faste\" med mælk, brød og kaffe, eller \"Fredagshygge\". Så kan de lægges på indkøbslisten med ét tryk." : "Mor eller far har ikke gemt nogen indkøbslister endnu."}
               </p>
+            )}
+            {data.templates.length > 0 && (
+              <p className="muted small" style={{ margin: 0 }}>Vælg en liste. Du kan fravælge varer, før de lægges på indkøbslisten.</p>
             )}
             {data.templates.length > 0 && (
               <div className="list">
@@ -47,7 +50,7 @@ export function Templates({ data, userId, onClose, onAdded }: Props) {
                 ))}
               </div>
             )}
-            {isParent && <div className="row"><button className="btn ghost" onClick={() => setEditing("new")}>Ny liste</button></div>}
+            {isParent && <div className="row"><button className="btn ghost" onClick={() => setEditing("new")}>+ Ny liste</button></div>}
           </div>
         )}
       </div>
@@ -104,7 +107,7 @@ function TemplatePicker({ data, userId, template, isParent, onBack, onEdit, onAd
       {err && <p className="status err">{err}</p>}
       <div className="row" style={{ justifyContent: "space-between" }}>
         <span className="row">
-          {onBack && <button className="link" onClick={onBack}>Alle lister</button>}
+          {onBack && <button className="link" onClick={onBack}>‹ Alle lister</button>}
           {isParent && <button className="link" onClick={onEdit}>Ret listen</button>}
         </span>
         <button className="btn" disabled={busy || count === 0} onClick={add}>Tilføj {count} {count === 1 ? "vare" : "varer"}</button>
@@ -116,7 +119,7 @@ function TemplatePicker({ data, userId, template, isParent, onBack, onEdit, onAd
 function TemplateEditor({ data, userId, template, onDone }: {
   data: FamilyData; userId: string; template?: ShoppingTemplate; onDone: (id?: string) => void;
 }) {
-  const [name, setName] = useState(template?.name ?? "Ugens faste");
+  const [name, setName] = useState(template?.name ?? "");
   const [items, setItems] = useState<TemplateItem[]>(template?.items ?? []);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -153,7 +156,7 @@ function TemplateEditor({ data, userId, template, onDone }: {
   return (
     <div className="stack">
       <label className="field">Navn på listen
-        <input id="template-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Fx Ugens faste" />
+        <input id="template-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Fx Ugens faste, Weekend eller Fest" />
       </label>
       <form className="addline" style={{ marginTop: 0 }} onSubmit={addLine}>
         <input id="template-item" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Fx 2 l mælk, rugbrød, kaffe" autoComplete="off" enterKeyHint="done" />
@@ -168,7 +171,7 @@ function TemplateEditor({ data, userId, template, onDone }: {
           ))}
         </div>
       ) : (
-        <p className="muted small" style={{ margin: 0 }}>Skriv de varer, I altid køber. Du kan skrive flere ad gangen adskilt af komma.</p>
+        <p className="muted small" style={{ margin: 0 }}>Skriv varerne på listen. Du kan skrive flere ad gangen adskilt af komma.</p>
       )}
       {err && <p className="status err">{err}</p>}
       <div className="row" style={{ justifyContent: "space-between" }}>
