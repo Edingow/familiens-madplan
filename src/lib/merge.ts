@@ -14,6 +14,8 @@ export interface ListItem {
   category: Category | "basic";
   qtyText: string;
   sources: string[];
+  /** Samlet mængde: g for vægt, ml for rumfang, tsk for skeer, og styk m.m. under "c:<enhed>". */
+  totals: Record<string, number>;
 }
 
 export const keyOf = (name: string) => name.toLowerCase().replace(/\s+/g, " ").trim();
@@ -62,6 +64,7 @@ export function buildShoppingList(dishes: Dish[], extras: Extra[]): ListItem[] {
     category: e.category,
     qtyText: formatTotals(e.totals),
     sources: [...e.sources],
+    totals: e.totals,
   }));
 }
 
@@ -119,4 +122,12 @@ const KEYWORDS: [Category, RegExp][] = [
 export function guessCategory(name: string): Category {
   const n = name.toLowerCase();
   return (KEYWORDS.find(([, re]) => re.test(n)) ?? ["andet"])[0];
+}
+
+/** Behovet for en vare i butikkens enheder: gram, milliliter og styk. Skeer omregnes groft til ml. */
+export function needOf(item: ListItem): { key: string; name: string; g: number; ml: number; stk: number } {
+  const t = item.totals;
+  let stk = 0;
+  for (const k of Object.keys(t)) if (k.startsWith("c:")) stk += t[k];
+  return { key: item.key, name: item.name, g: t.m || 0, ml: (t.v || 0) + (t.s || 0) * 5, stk };
 }

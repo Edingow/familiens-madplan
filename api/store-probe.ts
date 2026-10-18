@@ -84,5 +84,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       (out.wolt as unknown[]).push({ url: t, status: s.status, body: shape(s.json) ?? s.text.slice(0, 300) });
     }
   }
+  if (req.query.format === "lines") {
+    // Flad visning: én linje pr. felt, så felternes navne kan aflæses.
+    const lines: string[] = [];
+    const walk = (o: any, path: string) => {
+      if (lines.length > 400) return;
+      if (o && typeof o === "object") { for (const [k, v] of Object.entries(o)) walk(v, path ? `${path}.${k}` : k); }
+      else lines.push(`${path} = ${String(o).slice(0, 100)}`);
+    };
+    walk(out, "");
+    res.setHeader("content-type", "text/plain; charset=utf-8");
+    return res.status(200).send(lines.join("\n"));
+  }
   res.status(200).json(out);
 }
