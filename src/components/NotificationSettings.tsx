@@ -3,7 +3,7 @@ import { disablePush, enablePush, getPushState, savePrefs, type Prefs, type Push
 import { errorText } from "../lib/supabase";
 
 const LABELS: { kind: PushKind; label: string; parentsOnly?: boolean }[] = [
-  { kind: "list", label: "Nye varer og retter på madplanen" },
+  { kind: "list", label: "Nye varer på indkøbslisten og nye retter på madplanen" },
   { kind: "vote", label: "Når madplanen sendes til afstemning" },
   { kind: "votes", label: "Når nogen har stemt", parentsOnly: true },
 ];
