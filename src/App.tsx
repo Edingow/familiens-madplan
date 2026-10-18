@@ -55,6 +55,7 @@ function Main({ userId, sharedUrl, clearShared }: { userId: string; sharedUrl?: 
   if (!data.me || !data.family) return <Onboarding onDone={fam.reloadAll} />;
 
   const openSuggestions = data.me.role === "parent" ? data.recipes.filter((r) => r.suggested).length : 0;
+  const voteWaiting = data.family.plan_vote_open && data.dishes.some((d) => d.status === "planned") && !data.reviews.some((r) => r.user_id === userId) ? 1 : 0;
   const goTo = (t: Tab) => { setTab(t); window.scrollTo(0, 0); };
 
   const common = { data, userId, onChanged: fam.reloadAll, openAdd: () => setAdding(true), onFill: (d: Dish) => setFill({ kind: "dish", dish: d }), goTo };
@@ -88,7 +89,7 @@ function Main({ userId, sharedUrl, clearShared }: { userId: string; sharedUrl?: 
           {tabBtn("list", <IconCart />)}
           {tabBtn("plan", <IconCalendar />)}
           {tabBtn("recipes", <IconBook />, openSuggestions)}
-          {tabBtn("vote", <IconVote />)}
+          {tabBtn("vote", <IconVote />, voteWaiting)}
           {tabBtn("settings", <IconGear />)}
         </div>
       </nav>

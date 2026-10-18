@@ -32,7 +32,7 @@ npm install
 
 ### 2. Opret databasen i Supabase
 1. Opret en gratis konto på https://supabase.com og tryk **New project**. Vælg region **Frankfurt (eu-central-1)**.
-2. Gå til **SQL Editor** → **New query**, indsæt hele indholdet af `supabase/schema.sql` og tryk **Run**. Har du en ældre database, så kør i stedet de nummererede filer (`002_…`, `003_…`, `004_…`), du ikke har kørt endnu.
+2. Gå til **SQL Editor** → **New query**, indsæt hele indholdet af `supabase/schema.sql` og tryk **Run**. Har du en ældre database, så kør i stedet de nummererede filer (`002_…` til `005_…`), du ikke har kørt endnu.
 3. Gå til **Authentication** → **Sign In / Providers** → **Email**. Slå **Confirm email** fra, hvis I vil kunne logge ind med det samme uden bekræftelsesmail.
 4. Gå til **Project Settings** → **API** og kopiér **Project URL** og **anon public key**. Dem skal du bruge i trin 4.
 

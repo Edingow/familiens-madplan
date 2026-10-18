@@ -54,6 +54,8 @@ export interface Family {
   parent_code: string;
   child_code: string;
   category_order: Category[];
+  plan_vote_open: boolean;
+  plan_vote_sent_at: string | null;
 }
 
 export interface Member {
@@ -100,6 +102,13 @@ export interface Vote {
   user_id: string;
   value: 1 | -1;
   comment: string | null;
+  suggestion_recipe_id: string | null;
+}
+
+export interface PlanReview {
+  family_id: string;
+  user_id: string;
+  reviewed_at: string;
 }
 
 export interface Extra {
