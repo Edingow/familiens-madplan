@@ -28,3 +28,25 @@ describe("serverfunktion /api/push", () => {
     expect(sent).toEqual([["https://push/jon", { title: "Indkøbslisten", body: "Luka har tilføjet mælk", tag: "list" }]]);
   });
 });
+
+describe("serverfunktion /api/share", () => {
+  it("gemmer linket via databasen, også når siden ikke kan læses", async () => {
+    process.env.SUPABASE_URL = "https://sb.test"; process.env.SUPABASE_ANON_KEY = "anon";
+    const rpc: any[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: any, init?: any) => {
+      const u = String(url);
+      if (u.includes("/rpc/save_shared_recipe")) { rpc.push(JSON.parse(init.body)); return new Response('"Luka"'); }
+      return new Response("login påkrævet", { status: 403 });
+    }));
+    const { default: handler } = await import("../api/share");
+    let status = 0, text = "";
+    const res: any = { status(s: number) { status = s; return res; }, setHeader() { return res; }, send(t: string) { text = t; return res; } };
+    await handler({ method: "POST", query: { key: "ab".repeat(18) }, headers: {}, body: { url: "Se denne! https://www.instagram.com/p/abc123/ #mad" } } as any, res);
+    expect(status).toBe(200);
+    expect(text).toContain("Linket er gemt i Opskrifter: instagram.com");
+    expect(rpc[0]).toMatchObject({ key: "ab".repeat(18), url: "https://www.instagram.com/p/abc123/", items: [] });
+    await handler({ method: "POST", query: { key: "" }, headers: {}, body: { url: "https://x.dk" } } as any, res);
+    expect(status).toBe(401);
+    vi.unstubAllGlobals();
+  });
+});

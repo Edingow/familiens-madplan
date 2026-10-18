@@ -33,7 +33,7 @@ npm install
 
 ### 2. Opret databasen i Supabase
 1. Opret en gratis konto på https://supabase.com og tryk **New project**. Vælg region **Frankfurt (eu-central-1)**.
-2. Gå til **SQL Editor** → **New query**, indsæt hele indholdet af `supabase/schema.sql` og tryk **Run**. Har du en ældre database, så kør i stedet de nummererede filer (`002_…` til `006_…`), du ikke har kørt endnu.
+2. Gå til **SQL Editor** → **New query**, indsæt hele indholdet af `supabase/schema.sql` og tryk **Run**. Har du en ældre database, så kør i stedet de nummererede filer (`002_…` til `007_…`), du ikke har kørt endnu.
 3. Gå til **Authentication** → **Sign In / Providers** → **Email**. Slå **Confirm email** fra, hvis I vil kunne logge ind med det samme uden bekræftelsesmail.
 4. Gå til **Project Settings** → **API** og kopiér **Project URL** og **anon public key**. Dem skal du bruge i trin 4.
 
@@ -66,16 +66,12 @@ Hver `env add` beder dig indsætte værdien fra trin 2 og 3. Den sidste kommando
 4. Under **Indstillinger** står to koder. Mia bruger forældrekoden. Børnene bruger børnekoden. Alle skal have deres egen e-mail.
 5. Sæt afdelingerne i den rækkefølge, I går gennem jeres faste supermarked.
 
-### 6. Del opskrifter direkte fra Safari, TikTok og Instagram (valgfrit)
-iPhone kan ikke dele direkte til en hjemmeskærms-app, så det klares med en genvej:
-
-1. Åbn appen **Genveje** → **+**.
-2. Tryk på **i**-ikonet nederst og slå **Vis i delingsark** til. Vælg kun **URL'er** og **Tekst** som input.
-3. Tilføj handlingen **Kod URL** med *Genvejsinput* som input.
-4. Tilføj handlingen **Åbn URL'er** med teksten `https://DIN-APP.vercel.app/?url=` efterfulgt af variablen *Kodet URL*.
-5. Kald genvejen **Til madplanen**.
-
-Når du nu trykker **Del** på en opskrift, vælger du **Til madplanen**, og appen henter ingredienserne. Genvejen åbner appen i Safari, så første gang skal man logge ind dér også.
+### 6. Gem opskrifter direkte fra Safari, Instagram og TikTok (valgfrit)
+1. I appen: **Familie** → **Vis min genvejsadresse** → **Kopiér adressen**.
+2. Åbn **Genveje** → **+**. Kald genvejen **Gem opskrift**.
+3. Tryk på **i** nederst, slå **Vis i delingsark** til, og vælg **URL'er** og **Tekst**.
+4. Tilføj handlingen **Hent indhold af URL**. Indsæt adressen, sæt **Metode** til **POST**, **Anmodningstekst** til **JSON**, og tilføj feltet `url` med værdien **Genvejsinput**.
+5. Tilføj handlingen **Vis meddelelse** med **Indhold af URL**.
 
 ---
 

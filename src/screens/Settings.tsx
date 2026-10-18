@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NotificationSettings } from "../components/NotificationSettings";
+import { ShareSettings } from "../components/ShareSettings";
 import { errorText, supabase } from "../lib/supabase";
 import { CATEGORY_NAMES, DEFAULT_ORDER, type Category } from "../lib/types";
 import { clearLocalData, type FamilyData } from "../lib/useFamily";
@@ -50,6 +51,8 @@ export function Settings({ data, userId, onChanged }: Props) {
       </section>
 
       <NotificationSettings userId={userId} familyId={data.family!.id} isParent={isParent} />
+
+      <ShareSettings />
 
       <section className="stack">
         <h2>Familien {data.family?.name}</h2>
