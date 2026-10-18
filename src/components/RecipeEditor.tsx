@@ -35,7 +35,7 @@ export function RecipeEditor({ data, userId, recipe, onClose, onSaved }: Props) 
     setBusy(true); setErr("");
     try {
       const r = await callApi<ParsedRecipe>("/api/recipe", {
-        text: `Opskrift: ${title || "Egen opskrift"}\nAntal personer: ${servings}\nIngredienser:\n${lines}\n\n(Fremgangsmåden er skrevet separat, så sæt instructions til null.)`,
+        text: `Opskrift: ${title || "Egen opskrift"}\nAntal personer: ${servings}\nIngredienser:\n${lines}`,
       });
       setParsed({ items: r.items, kcal: r.kcal_per_serving });
       setParsedFrom(lines);
@@ -53,7 +53,7 @@ export function RecipeEditor({ data, userId, recipe, onClose, onSaved }: Props) 
     }
     const row = {
       title: title.trim(), servings_base: servings, items: parsed?.items ?? [],
-      kcal_per_serving: kcal, instructions: instructions.trim() || null,
+      kcal_per_serving: kcal, ...(recipe?.url ? {} : { instructions: instructions.trim() || null }),
     };
     const { error } = recipe
       ? await supabase.from("recipes").update(row).eq("id", recipe.id)
@@ -100,10 +100,10 @@ export function RecipeEditor({ data, userId, recipe, onClose, onSaved }: Props) 
           </div>
         )}
 
-        <label className="field">Fremgangsmåde (valgfri)
+        {!recipe?.url && <label className="field">Fremgangsmåde (valgfri)
           <textarea id="recipe-steps" value={instructions} onChange={(e) => setInstructions(e.target.value)}
             placeholder={"1. Rør farsen med løg, æg og mælk.\n2. Steg frikadellerne 5 min på hver side."} style={{ minHeight: 120 }} />
-        </label>
+        </label>}
 
         {err && <p className="status err">{err}</p>}
 

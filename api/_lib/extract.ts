@@ -24,7 +24,6 @@ interface ClaudeRecipe {
   title: string;
   servings: number | null;
   kcal_per_serving?: number | null;
-  instructions?: string | null;
   items: { name: string; qty: number | null; unit: string; category: string; basic: boolean }[];
 }
 
@@ -81,7 +80,6 @@ export async function extractRecipe(input: { url?: string; text?: string; image?
   let pageTitle: string | null = null;
   let servingsHint: number | null = null;
   let kcalHint: number | null = null;
-  let instructionsHint: string | null = null;
 
   if (input.url) {
     const u = safeUrl(input.url);
@@ -100,10 +98,9 @@ export async function extractRecipe(input: { url?: string; text?: string; image?
     if (structured) {
       servingsHint = structured.servings;
       kcalHint = structured.kcal;
-      instructionsHint = structured.instructions;
       prompt = `Opskrift: ${structured.title ?? ""}\nAntal: ${structured.servings ?? "ukendt"}\n` +
         (structured.kcal ? `Kalorier pr. portion ifølge siden: ${structured.kcal}\n` : "") +
-        `Ingredienser:\n${structured.ingredients.join("\n")}\n\n(Fremgangsmåden er allerede gemt, så sæt instructions til null.)`;
+        `Ingredienser:\n${structured.ingredients.join("\n")}`;
     } else {
       const desc = metaContent(html, "og:description") ?? metaContent(html, "description") ?? "";
       const body = SOCIAL.test(u.hostname) ? "" : pageText(html);
@@ -125,7 +122,8 @@ export async function extractRecipe(input: { url?: string; text?: string; image?
     image,
     items: r.items,
     kcal_per_serving: kcalHint ?? r.kcal_per_serving,
-    instructions: instructionsHint ?? r.instructions,
+    // Fremgangsmåden står på siden, som opskriften linker til.
+    instructions: null,
   };
 }
 
@@ -147,6 +145,5 @@ async function askClaude(prompt: string, image?: ImageInput | null): Promise<Ext
       basic: !!i.basic,
     }));
   const kcal = typeof r.kcal_per_serving === "number" && r.kcal_per_serving > 20 && r.kcal_per_serving < 5000 ? Math.round(r.kcal_per_serving) : null;
-  const instructions = typeof r.instructions === "string" && r.instructions.trim() ? r.instructions.trim().slice(0, 8000) : null;
-  return { title: r.title?.trim() || null, servings: r.servings ?? null, image: null, items, kcal_per_serving: items.length ? kcal : null, instructions };
+  return { title: r.title?.trim() || null, servings: r.servings ?? null, image: null, items, kcal_per_serving: items.length ? kcal : null, instructions: null };
 }

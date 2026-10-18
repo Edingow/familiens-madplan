@@ -115,7 +115,7 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo, onEdit }
           })}>Ikke nu</button>
         )}
         {r.items.length > 0 && <button className="link" onClick={() => setPanel(panel === "items" ? "none" : "items")}>{panel === "items" ? "Skjul" : "Ingredienser"}</button>}
-        {r.instructions && <button className="link" onClick={() => setPanel(panel === "steps" ? "none" : "steps")}>{panel === "steps" ? "Skjul" : "Fremgangsmåde"}</button>}
+        {r.instructions && !r.url && <button className="link" onClick={() => setPanel(panel === "steps" ? "none" : "steps")}>{panel === "steps" ? "Skjul" : "Fremgangsmåde"}</button>}
         {canEdit && r.items.length === 0 && <button className="btn ghost small" onClick={() => onFill({ kind: "recipe", recipe: r })}>Hent ingredienser</button>}
         {canEdit && r.items.length > 0 && r.url && <button className="link" onClick={() => onFill({ kind: "recipe", recipe: r })}>Hent igen fra linket</button>}
       </div>
@@ -151,7 +151,7 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo, onEdit }
           {r.items.map((it, i) => <li key={i}>{[it.qty != null ? fmt(it.qty) : "", it.unit, it.name].filter(Boolean).join(" ")}</li>)}
         </ul>
       )}
-      {panel === "steps" && r.instructions && (
+      {panel === "steps" && r.instructions && !r.url && (
         <div className="small" style={{ whiteSpace: "pre-line", lineHeight: 1.5 }}>{r.instructions}</div>
       )}
 

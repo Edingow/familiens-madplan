@@ -534,3 +534,8 @@ begin
   return m.display_name;
 end $$;
 grant execute on function public.save_shared_recipe(text, text, text, text, int, jsonb, int, text) to anon, authenticated;
+
+-- Vurdering af madplanen (samme som 009_vurdering.sql) ----------------------
+
+alter table public.families add column if not exists plan_assessment jsonb;
+alter table public.families add column if not exists plan_assessed_at timestamptz;

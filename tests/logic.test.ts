@@ -5,7 +5,7 @@ import { defaultDeadline } from "../src/lib/util";
 import type { Dish, Extra } from "../src/lib/types";
 
 const dish = (p: Partial<Dish>): Dish => ({
-  id: "d", recipe_id: null, family_id: "f", title: "Ret", url: null, image: null, note: null, servings_base: null, servings: null,
+  id: "d", recipe_id: null, kcal_per_serving: null, family_id: "f", title: "Ret", url: null, image: null, note: null, servings_base: null, servings: null,
   items: [], status: "planned", plan_date: null, vote_deadline: null, created_by: null, created_at: "", ...p,
 });
 

@@ -58,6 +58,16 @@ export interface Family {
   category_order: Category[];
   plan_vote_open: boolean;
   plan_vote_sent_at: string | null;
+  plan_assessment: PlanAssessment | null;
+  plan_assessed_at: string | null;
+}
+
+export interface PlanAssessment {
+  rating: "god" | "middel" | "mindre god";
+  summary: string;
+  points: { kind: "plus" | "minus"; text: string }[];
+  /** Hvilke retter vurderingen gjaldt, så appen kan se, om madplanen er ændret siden. */
+  dishIds?: string;
 }
 
 export interface Member {
@@ -86,6 +96,7 @@ export interface Recipe {
 export interface Dish {
   id: string;
   recipe_id: string | null;
+  kcal_per_serving: number | null;
   family_id: string;
   title: string;
   url: string | null;

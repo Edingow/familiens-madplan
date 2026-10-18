@@ -69,7 +69,6 @@ Regler for ingredienser:
 - basic er true kun for salt, peber, madolie og andre små mængder af ting næsten alle har i skabet.
 - title er en kort dansk titel. servings er antal personer/portioner, ellers null.
 - kcal_per_serving: dit bedste skøn over kalorier pr. portion ud fra ingredienserne og mængderne, afrundet til nærmeste 10. Står der et tal fra siden, så brug det. null hvis det ikke kan skønnes.
-- instructions: fremgangsmåden på dansk som korte, nummererede trin, én pr. linje. Kun hvis der står en fremgangsmåde i teksten, ellers null. Opfind den ikke.
 Oversæt alt til dansk.`;
 
 export const RECIPE_SCHEMA = {
@@ -79,7 +78,6 @@ export const RECIPE_SCHEMA = {
     title: { type: "string" },
     servings: { type: ["integer", "null"] },
     kcal_per_serving: { type: ["integer", "null"] },
-    instructions: { type: ["string", "null"] },
     items: {
       type: "array",
       items: {

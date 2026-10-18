@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { planRecipe } from "../lib/actions";
+import { assessPlan } from "../lib/assess";
+import { PlanAssessmentCard } from "../components/PlanAssessmentCard";
 import { errorText, supabase } from "../lib/supabase";
 import type { Dish, Recipe } from "../lib/types";
 import type { FamilyData } from "../lib/useFamily";
@@ -102,7 +104,11 @@ export function MealPlan({ data, userId, onFill, onChanged, goTo }: Props) {
           ) : (
             <>
               <div className="small muted">Når planen er klar, kan resten af familien markere det, de ikke har lyst til, og foreslå noget andet.</div>
-              <button className="btn" disabled={busy} onClick={() => run(() => check(supabase.rpc("send_plan_vote")))}>Send madplanen til afstemning</button>
+              <button className="btn" disabled={busy} onClick={() => run(async () => {
+                // Vurderingen er en hjælp; fejler den, sendes madplanen alligevel.
+                try { await assessPlan(data); } catch { /* fortsæt */ }
+                await check(supabase.rpc("send_plan_vote"));
+              })}>{busy ? "Sender…" : "Send madplanen til afstemning"}</button>
             </>
           )}
         </div>
@@ -111,6 +117,7 @@ export function MealPlan({ data, userId, onFill, onChanged, goTo }: Props) {
         <div className="banner">Madplanen er sendt til afstemning. <button className="link" style={{ color: "inherit" }} onClick={() => goTo("vote")}>Sig din mening</button></div>
       )}
       {err && <p className="status err" style={{ marginTop: 12 }}>{err}</p>}
+      <PlanAssessmentCard data={data} onChanged={onChanged} />
 
       <div className="list" style={{ marginTop: 16 }}>
         {days.map((day) => {

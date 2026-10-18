@@ -3,6 +3,7 @@ import { callApi, errorText, supabase } from "../lib/supabase";
 import type { Dish, ParsedRecipe, Vote } from "../lib/types";
 import type { FamilyData } from "../lib/useFamily";
 import { dayLabel } from "../lib/util";
+import { PlanAssessmentCard } from "../components/PlanAssessmentCard";
 
 interface Props { data: FamilyData; userId: string; onChanged: () => void; goTo: (tab: "plan" | "recipes") => void }
 
@@ -38,6 +39,7 @@ export function Voting({ data, userId, onChanged, goTo }: Props) {
       <p className="muted" style={{ margin: "16px 0 0" }}>
         Tryk <b>Ikke for mig</b> ved de retter, du ikke har lyst til. Skriv gerne hvorfor, og foreslå en anden ret.
       </p>
+      <PlanAssessmentCard data={data} onChanged={onChanged} />
       <div className="section">
         {planned.map((d) => <VoteCard key={d.id} dish={d} data={data} userId={userId} onChanged={onChanged} />)}
       </div>

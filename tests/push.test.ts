@@ -50,3 +50,26 @@ describe("serverfunktion /api/share", () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe("serverfunktion /api/plan-review", () => {
+  it("sender ugens retter til Claude og returnerer en kort vurdering", async () => {
+    process.env.SUPABASE_URL = "https://sb.test"; process.env.SUPABASE_ANON_KEY = "anon"; process.env.ANTHROPIC_API_KEY = "k";
+    let prompt = "";
+    vi.stubGlobal("fetch", vi.fn(async (url: any, init?: any) => {
+      const u = String(url);
+      if (u.includes("/auth/v1/user")) return new Response(JSON.stringify({ id: "u1" }));
+      prompt = JSON.parse(init.body).messages[0].content.at(-1).text;
+      return new Response(JSON.stringify({ content: [{ type: "tool_use", input: { rating: "middel", summary: "Fin uge med lidt meget rødt kød.", points: [{ kind: "minus", text: "Byt tirsdagens lasagne til fisk." }, { kind: "plus", text: "Masser af grønt." }, { kind: "x", text: "y" }, { kind: "plus", text: "z" }, { kind: "plus", text: "for mange" }] } }] }));
+    }));
+    const { default: handler } = await import("../api/plan-review");
+    let status = 0, out: any;
+    const res: any = { status(s: number) { status = s; return res; }, json(j: unknown) { out = j; return res; } };
+    await handler({ method: "POST", headers: { authorization: "Bearer t" }, body: { dishes: [{ title: "Lasagne", day: "Tir 20. okt", kcal: 750, servings: 4, items: ["hakket oksekød", "pasta"] }] } } as any, res);
+    expect(status).toBe(200);
+    expect(prompt).toContain("Tir 20. okt: Lasagne (ca. 750 kcal pr. person)");
+    expect(out.rating).toBe("middel");
+    expect(out.points).toHaveLength(4);
+    expect(out.points[2].kind).toBe("minus");
+    vi.unstubAllGlobals();
+  });
+});
