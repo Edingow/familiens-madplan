@@ -13,6 +13,7 @@ Madplan, afstemning og fælles indkøbsliste for hele familien. Kører som app p
 - Stregkodescanner med opslag i Open Food Facts. Foto af emballagen, når stregkoden ikke findes.
 - Flueben virker uden net i butikken og sendes, når der er forbindelse igen.
 - Live opdatering mellem telefonerne.
+- Notifikationer på telefonen om nye varer, afstemninger og stemmer. Hver person vælger selv under **Familie**.
 
 Online indkøb og prissammenligning er fase 2.
 
@@ -32,7 +33,7 @@ npm install
 
 ### 2. Opret databasen i Supabase
 1. Opret en gratis konto på https://supabase.com og tryk **New project**. Vælg region **Frankfurt (eu-central-1)**.
-2. Gå til **SQL Editor** → **New query**, indsæt hele indholdet af `supabase/schema.sql` og tryk **Run**. Har du en ældre database, så kør i stedet de nummererede filer (`002_…` til `005_…`), du ikke har kørt endnu.
+2. Gå til **SQL Editor** → **New query**, indsæt hele indholdet af `supabase/schema.sql` og tryk **Run**. Har du en ældre database, så kør i stedet de nummererede filer (`002_…` til `006_…`), du ikke har kørt endnu.
 3. Gå til **Authentication** → **Sign In / Providers** → **Email**. Slå **Confirm email** fra, hvis I vil kunne logge ind med det samme uden bekræftelsesmail.
 4. Gå til **Project Settings** → **API** og kopiér **Project URL** og **anon public key**. Dem skal du bruge i trin 4.
 
@@ -77,6 +78,12 @@ iPhone kan ikke dele direkte til en hjemmeskærms-app, så det klares med en gen
 Når du nu trykker **Del** på en opskrift, vælger du **Til madplanen**, og appen henter ingredienserne. Genvejen åbner appen i Safari, så første gang skal man logge ind dér også.
 
 ---
+
+## Notifikationer
+1. I Vercel tilføjes `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` og `PUSH_SECRET`. Nøglerne laves med `npx web-push generate-vapid-keys`, og `PUSH_SECRET` er en lang tilfældig tekst.
+2. I Supabase køres `supabase/006_notifikationer.sql`, og derefter:
+   `select private.set_push_config('https://DIN-APP.vercel.app/api/push', 'SAMME-PUSH_SECRET');`
+3. På telefonen: åbn appen fra hjemmeskærmen, gå til **Familie** og tryk **Slå notifikationer til**.
 
 ## Når du vil ændre noget
 - `npm run dev` starter appen lokalt. Serverfunktionerne kræver `npx vercel dev` i stedet.

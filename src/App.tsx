@@ -17,6 +17,13 @@ type Tab = "list" | "plan" | "recipes" | "vote" | "settings";
 const TITLES: Record<Tab, string> = { list: "Indkøb", plan: "Madplan", recipes: "Opskrifter", vote: "Afstemning", settings: "Familie" };
 
 /** Et link delt via iOS-genvejen åbner appen med ?url=... */
+/** En notifikation åbner appen med ?tab=... */
+function takeTab(): Tab | undefined {
+  const t = new URLSearchParams(location.search).get("tab");
+  if (t) history.replaceState(null, "", location.pathname);
+  return t === "list" || t === "plan" || t === "recipes" || t === "vote" ? t : undefined;
+}
+
 function takeSharedUrl(): string | undefined {
   const p = new URLSearchParams(location.search);
   const raw = p.get("url") || p.get("text") || "";
@@ -47,7 +54,7 @@ export default function App() {
 function Main({ userId, sharedUrl, clearShared }: { userId: string; sharedUrl?: string; clearShared: () => void }) {
   const fam = useFamily(userId);
   const { data } = fam;
-  const [tab, setTab] = useState<Tab>(() => (sharedUrl ? "recipes" : "list"));
+  const [tab, setTab] = useState<Tab>(() => (sharedUrl ? "recipes" : takeTab() ?? "list"));
   const [adding, setAdding] = useState<boolean>(!!sharedUrl);
   const [fill, setFill] = useState<FillTarget | null>(null);
 
