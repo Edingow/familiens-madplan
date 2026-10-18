@@ -78,7 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const found = new Map<string, StoreProduct[]>(); // `${key}|${store}` -> kandidater
   await Promise.all(needs.flatMap((n) => stores.map(async (s: StoreId) => {
     try {
-      found.set(`${n.key}|${s}`, (await SEARCH[s](searchTerm(n.name))).slice(0, 8));
+      found.set(`${n.key}|${s}`, (await SEARCH[s](searchTerm(n.name))).slice(0, 10));
     } catch (e) {
       console.error("butik", s, n.name, e);
       errors[s] = `${STORES.find((x) => x.id === s)?.name} svarede ikke`;
