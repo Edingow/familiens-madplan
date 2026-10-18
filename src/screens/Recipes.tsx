@@ -1,9 +1,10 @@
 import { useState } from "react";
 import type { FillTarget } from "../components/AddDish";
 import { RecipeEditor } from "../components/RecipeEditor";
+import { NutritionLine } from "../components/NutritionLine";
 import { planRecipe } from "../lib/actions";
-import { errorText, supabase } from "../lib/supabase";
-import type { Recipe } from "../lib/types";
+import { callApi, errorText, supabase } from "../lib/supabase";
+import type { Nutrition, Recipe } from "../lib/types";
 import type { FamilyData } from "../lib/useFamily";
 import { dayLabel, hostOf, nextDays } from "../lib/util";
 import { fmt } from "../lib/merge";
@@ -95,7 +96,7 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo, onEdit }
           <span className="muted small">
             {[r.items.length ? `${r.items.length} ingredienser` : "Ingen ingredienser endnu", r.servings_base && `${r.servings_base} pers.`, author].filter(Boolean).join(" · ")}
           </span>
-          {r.kcal_per_serving && <span className="small"><b>Ca. {r.kcal_per_serving} kcal</b> pr. person</span>}
+          <NutritionLine n={r.nutrition} kcal={r.kcal_per_serving} />
           {r.url && <a className="small" href={r.url} target="_blank" rel="noopener noreferrer">{hostOf(r.url)}</a>}
           {(onPlan.length > 0 || r.suggested) && (
             <div className="row" style={{ marginTop: 2 }}>
@@ -118,6 +119,13 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo, onEdit }
         {r.instructions && !r.url && <button className="link" onClick={() => setPanel(panel === "steps" ? "none" : "steps")}>{panel === "steps" ? "Skjul" : "Fremgangsmåde"}</button>}
         {canEdit && r.items.length === 0 && <button className="btn ghost small" onClick={() => onFill({ kind: "recipe", recipe: r })}>Hent ingredienser</button>}
         {canEdit && r.items.length > 0 && r.url && <button className="link" onClick={() => onFill({ kind: "recipe", recipe: r })}>Hent igen fra linket</button>}
+        {canEdit && r.items.length > 0 && !r.nutrition && (
+          <button className="link" disabled={busy} onClick={() => run(async () => {
+            const n = await callApi<Nutrition>("/api/nutrition", { items: r.items, servings: r.servings_base });
+            const { error } = await supabase.from("recipes").update({ nutrition: n, kcal_per_serving: n.coverage >= 0.6 ? n.kcal : r.kcal_per_serving }).eq("id", r.id);
+            if (error) throw error;
+          })}>{busy ? "Regner…" : "Beregn næring"}</button>
+        )}
       </div>
 
       {panel === "plan" && (

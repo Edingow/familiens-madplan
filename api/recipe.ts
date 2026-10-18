@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!r.items.length) return fail(res, 422, "Der blev ikke fundet nogen ingredienser. Prøv at indsætte selve ingredienslisten.");
     const out: ParsedRecipe = {
       title: r.title || "Opskrift", servings: r.servings, image: r.image, items: r.items,
-      kcal_per_serving: r.kcal_per_serving, instructions: r.instructions,
+      kcal_per_serving: r.kcal_per_serving, instructions: r.instructions, nutrition: r.nutrition ?? null,
     };
     res.status(200).json(out);
   } catch (e) {

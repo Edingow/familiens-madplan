@@ -17,6 +17,7 @@ export async function assessPlan(data: FamilyData): Promise<void> {
       title: d.title,
       day: d.plan_date ? dayLabel(d.plan_date) : null,
       kcal: d.kcal_per_serving ?? data.recipes.find((r) => r.id === d.recipe_id)?.kcal_per_serving ?? null,
+      nutrition: d.nutrition ?? data.recipes.find((r) => r.id === d.recipe_id)?.nutrition ?? null,
       servings: d.servings,
       items: d.items.filter((i) => !i.off).map((i) => i.name),
     })),

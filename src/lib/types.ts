@@ -30,6 +30,19 @@ export interface Ingredient {
   off?: boolean;
 }
 
+/** Næringsindhold pr. person, regnet ud fra Frida. */
+export interface Nutrition {
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number;
+  salt: number;
+  /** Andel af ingredienserne, der blev fundet i Frida (0-1). */
+  coverage: number;
+  source: "frida";
+}
+
 export interface ParsedRecipe {
   title: string;
   servings: number | null;
@@ -37,6 +50,7 @@ export interface ParsedRecipe {
   items: Ingredient[];
   kcal_per_serving: number | null;
   instructions: string | null;
+  nutrition?: Nutrition | null;
 }
 
 export interface Product {
@@ -97,6 +111,7 @@ export interface Recipe {
   suggested: boolean;
   kcal_per_serving: number | null;
   instructions: string | null;
+  nutrition: Nutrition | null;
   created_by: string | null;
   created_at: string;
 }
@@ -105,6 +120,7 @@ export interface Dish {
   id: string;
   recipe_id: string | null;
   kcal_per_serving: number | null;
+  nutrition: Nutrition | null;
   family_id: string;
   title: string;
   url: string | null;

@@ -4,7 +4,7 @@ import { fail, requireUser } from "./_lib/http.js";
 
 export const config = { maxDuration: 60 };
 
-interface InDish { title: string; day: string | null; kcal: number | null; servings: number | null; items: string[] }
+interface InDish { title: string; day: string | null; kcal: number | null; servings: number | null; items: string[]; nutrition?: { protein: number; fat: number; carbs: number; fiber: number } | null }
 interface Swap { from: string; to: string; category: string }
 export interface PlanAssessment {
   rating: "god" | "middel" | "mindre god";
@@ -19,7 +19,7 @@ const SYSTEM = `Du vurderer en dansk families madplan for ugen ud fra Fødevares
 - Vælg fuldkorn frem for hvidt mel, hvid pasta og hvide ris.
 - Vælg magre mejeriprodukter, og spar på fløde, ost og smør.
 - Variation er godt.
-Vurder hele ugen samlet ud fra retternes navne, ingredienser og kalorieskøn.
+Vurder hele ugen samlet ud fra retternes navne, ingredienser, kalorier og næringsindhold, når det er oplyst.
 
 Svar på dansk, kort og venligt, som en hjælpsom ven, der kender kostrådene. Ingen løftede pegefingre.
 - rating: "god", "middel" eller "mindre god".
@@ -67,6 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const text = "Ugens madplan:\n" + dishes.map((d, i) =>
     `${i + 1}. ${d.day ?? "Uden dag"}: ${String(d.title).slice(0, 120)}` +
     (d.kcal ? ` (ca. ${d.kcal} kcal pr. person)` : "") +
+    (d.nutrition ? ` [pr. person: ${Math.round(d.nutrition.protein)} g protein, ${Math.round(d.nutrition.fat)} g fedt, ${Math.round(d.nutrition.carbs)} g kulhydrat, ${Math.round(d.nutrition.fiber)} g fibre]` : "") +
     (d.items?.length ? `\n  Ingredienser: ${d.items.slice(0, 40).map((x) => String(x).slice(0, 60)).join(", ")}` : "\n  Ingredienser: ukendt"),
   ).join("\n");
 

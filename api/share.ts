@@ -32,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const save = await fetch(`${supa}/rest/v1/rpc/save_shared_recipe`, {
     method: "POST",
     headers: { "content-type": "application/json", apikey: anon!, authorization: `Bearer ${anon}` },
-    body: JSON.stringify({ key, title, url: u.toString(), image: r.image, servings: r.servings, items: r.items, kcal: r.kcal_per_serving, instructions: r.instructions }),
+    body: JSON.stringify({ key, title, url: u.toString(), image: r.image, servings: r.servings, items: r.items, kcal: r.kcal_per_serving, instructions: r.instructions, nutrition: r.nutrition ?? null }),
   });
   if (!save.ok) {
     const t = await save.text();

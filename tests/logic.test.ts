@@ -5,7 +5,7 @@ import { defaultDeadline } from "../src/lib/util";
 import type { Dish, Extra } from "../src/lib/types";
 
 const dish = (p: Partial<Dish>): Dish => ({
-  id: "d", recipe_id: null, kcal_per_serving: null, family_id: "f", title: "Ret", url: null, image: null, note: null, servings_base: null, servings: null,
+  id: "d", recipe_id: null, kcal_per_serving: null, nutrition: null, family_id: "f", title: "Ret", url: null, image: null, note: null, servings_base: null, servings: null,
   items: [], status: "planned", plan_date: null, vote_deadline: null, created_by: null, created_at: "", ...p,
 });
 
@@ -95,6 +95,7 @@ describe("serverfunktion /api/recipe", () => {
       if (u.startsWith("https://opskrift.dk")) return new Response(`<script type="application/ld+json">{"@type":"Recipe","name":"Pasta","recipeYield":"2","recipeIngredient":["200 g pasta"]}</script>`);
       if (u.startsWith("https://api.anthropic.com")) {
         const body = JSON.parse(init.body);
+        if (body.tools[0].name === "match") return new Response(JSON.stringify({ content: [{ type: "tool_use", input: { picks: [] } }] }));
         expect(body.messages[0].content.at(-1).text).toContain("200 g pasta");
         return new Response(JSON.stringify({ content: [{ type: "tool_use", input: { found: true, title: "Pasta", servings: 2, items: [{ name: "Pasta", qty: 200, unit: "g", category: "kolonial", basic: false }] } }] }));
       }
@@ -105,8 +106,8 @@ describe("serverfunktion /api/recipe", () => {
     const res: any = { status(s: number) { status = s; return res; }, json(j: unknown) { out = j; return res; } };
     await handler({ method: "POST", headers: { authorization: "Bearer t" }, body: { url: "https://opskrift.dk/pasta" } } as any, res);
     expect(status).toBe(200);
-    expect(out).toEqual({ title: "Pasta", servings: 2, image: null, items: [{ name: "pasta", qty: 200, unit: "g", category: "kolonial", basic: false }], kcal_per_serving: null, instructions: null });
-    expect(calls.length).toBe(3);
+    expect(out).toEqual({ title: "Pasta", servings: 2, image: null, items: [{ name: "pasta", qty: 200, unit: "g", category: "kolonial", basic: false }], kcal_per_serving: null, instructions: null, nutrition: null });
+    expect(calls.length).toBe(4);
   });
   it("afviser uden login og ved interne adresser", async () => {
     const { default: handler } = await import("../api/recipe");
@@ -129,6 +130,7 @@ describe("hentning af blokerede sider", () => {
     vi.stubGlobal("fetch", vi.fn(async (url: any, init?: any) => {
       const u = String(url);
       if (u.startsWith("https://api.anthropic.com")) {
+        if (JSON.parse(init.body).tools[0].name === "match") return new Response(JSON.stringify({ content: [{ type: "tool_use", input: { picks: [] } }] }));
         expect(JSON.parse(init.body).messages[0].content.at(-1).text).toContain("500 g kyllingebryst");
         return new Response(JSON.stringify({ content: [{ type: "tool_use", input: { found: true, title: "Marry me kyllingesuppe", servings: 4, items: [{ name: "kyllingebryst", qty: 500, unit: "g", category: "kod", basic: false }] } }] }));
       }
@@ -159,5 +161,28 @@ describe("læsetjeneste med HTML", () => {
     const r = await extractRecipe({ url: "https://gourministeriet.dk/suppe/" });
     expect(r.image).toBe("https://g.dk/suppe.jpg");
     expect(r.items).toHaveLength(1);
+  });
+});
+
+describe("næring fra Frida", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("finder kandidater og regner næring pr. person ud fra Claudes valg", async () => {
+    process.env.ANTHROPIC_API_KEY = "k";
+    const { candidates, computeNutrition } = await import("../api/_lib/nutrition");
+    expect(candidates("løg")[0].name).toBe("Løg, rå");
+    expect(candidates("hakket oksekød")[0].name).toMatch(/^Oksekød, hakket/);
+    expect(candidates("flåede tomater")[0].name).toBe("Tomat, flået, konserves");
+    expect(candidates("kyllingebryst")[0].name).toBe("Kylling, bryst, kød og skind, rå");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ content: [{ type: "tool_use", input: { picks: [
+      { index: 1, id: 716, grams: 240 },   // 2 løg
+      { index: 2, id: 99999, grams: 100 }, // id der ikke var blandt kandidaterne: ignoreres
+    ] } }] }))));
+    const n = (await computeNutrition([
+      { name: "løg", qty: 2, unit: "stk", category: "frugt" },
+      { name: "hakket oksekød", qty: 500, unit: "g", category: "kod" },
+    ], 2))!;
+    expect(n.kcal).toBe(50);        // 43,19 kcal/100 g * 240 g / 2 personer ≈ 52
+    expect(n.coverage).toBe(0.5);
+    expect(n.source).toBe("frida");
   });
 });

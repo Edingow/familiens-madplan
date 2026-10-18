@@ -1,7 +1,8 @@
 import { claudeStructured, RECIPE_SCHEMA, RECIPE_SYSTEM, type ImageInput } from "./claude.js";
 import { extractJsonLdRecipe, metaContent, pageText } from "./html.js";
 import { BROWSER_UA } from "./http.js";
-import { asCategory, type Ingredient } from "../../src/lib/types.js";
+import { asCategory, type Ingredient, type Nutrition } from "../../src/lib/types.js";
+import { computeNutrition } from "./nutrition.js";
 
 /** Fejl, der skyldes det, brugeren har sendt (forkert link, side der ikke kan hentes). */
 export class InputError extends Error {
@@ -17,6 +18,7 @@ export interface Extracted {
   items: Ingredient[];
   kcal_per_serving: number | null;
   instructions: string | null;
+  nutrition?: Nutrition | null;
 }
 
 interface ClaudeRecipe {
@@ -74,7 +76,18 @@ export async function fetchPage(u: URL): Promise<{ html: string; viaReader: bool
 }
 
 /** Læs en opskrift fra et link, en tekst eller et billede. */
+/** Læs en opskrift og regn næringsindholdet ud med Frida. */
 export async function extractRecipe(input: { url?: string; text?: string; image?: ImageInput | null }): Promise<Extracted> {
+  const r = await extractRecipeRaw(input);
+  if (!r.items.length) return r;
+  let nutrition: Nutrition | null = null;
+  try { nutrition = await computeNutrition(r.items, r.servings); } catch (e) { console.error("Frida", e); }
+  // Frida-tallet bruges, når de fleste ingredienser er fundet; ellers Claudes skøn.
+  const kcal = nutrition && nutrition.coverage >= 0.6 ? nutrition.kcal : r.kcal_per_serving;
+  return { ...r, nutrition, kcal_per_serving: kcal };
+}
+
+async function extractRecipeRaw(input: { url?: string; text?: string; image?: ImageInput | null }): Promise<Extracted> {
   let prompt: string;
   let image: string | null = null;
   let pageTitle: string | null = null;

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { fmt } from "../lib/merge";
 import { callApi, errorText, supabase } from "../lib/supabase";
-import type { Ingredient, ParsedRecipe, Recipe } from "../lib/types";
+import type { Ingredient, Nutrition, ParsedRecipe, Recipe } from "../lib/types";
 import type { FamilyData } from "../lib/useFamily";
 
 interface Props {
@@ -11,6 +11,12 @@ interface Props {
   recipe?: Recipe;
   onClose: () => void;
   onSaved: () => void;
+}
+
+function scaleNutrition(n: Nutrition | null, from: number, to: number): Nutrition | null {
+  if (!n || from === to || !from || !to) return n;
+  const f = from / to, r1 = (x: number) => Math.round(x * f * 10) / 10;
+  return { ...n, kcal: Math.round((n.kcal * f) / 10) * 10, protein: r1(n.protein), carbs: r1(n.carbs), fat: r1(n.fat), fiber: r1(n.fiber), salt: r1(n.salt) };
 }
 
 const lineOf = (i: Ingredient) => [i.qty != null ? fmt(i.qty) : "", i.unit, i.name].filter(Boolean).join(" ");
@@ -23,8 +29,8 @@ export function RecipeEditor({ data, userId, recipe, onClose, onSaved }: Props) 
   const [servings, setServings] = useState<number>(recipe?.servings_base ?? 4);
   const [lines, setLines] = useState(initialLines);
   const [instructions, setInstructions] = useState(recipe?.instructions ?? "");
-  const [parsed, setParsed] = useState<{ items: Ingredient[]; kcal: number | null } | null>(
-    recipe ? { items: recipe.items, kcal: recipe.kcal_per_serving } : null);
+  const [parsed, setParsed] = useState<{ items: Ingredient[]; kcal: number | null; nutrition: Nutrition | null } | null>(
+    recipe ? { items: recipe.items, kcal: recipe.kcal_per_serving, nutrition: recipe.nutrition } : null);
   const [parsedFrom, setParsedFrom] = useState(recipe ? initialLines : null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -37,7 +43,7 @@ export function RecipeEditor({ data, userId, recipe, onClose, onSaved }: Props) 
       const r = await callApi<ParsedRecipe>("/api/recipe", {
         text: `Opskrift: ${title || "Egen opskrift"}\nAntal personer: ${servings}\nIngredienser:\n${lines}`,
       });
-      setParsed({ items: r.items, kcal: r.kcal_per_serving });
+      setParsed({ items: r.items, kcal: r.kcal_per_serving, nutrition: r.nutrition ?? null });
       setParsedFrom(lines);
     } catch (e) { setErr(errorText(e)); }
     finally { setBusy(false); }
@@ -53,7 +59,9 @@ export function RecipeEditor({ data, userId, recipe, onClose, onSaved }: Props) 
     }
     const row = {
       title: title.trim(), servings_base: servings, items: parsed?.items ?? [],
-      kcal_per_serving: kcal, ...(recipe?.url ? {} : { instructions: instructions.trim() || null }),
+      kcal_per_serving: kcal,
+      // Næring pr. person følger antal personer, hvis ingredienserne er de samme.
+      nutrition: scaleNutrition(parsed?.nutrition ?? null, parsedFrom === initialLines ? recipe?.servings_base ?? servings : servings, servings), ...(recipe?.url ? {} : { instructions: instructions.trim() || null }),
     };
     const { error } = recipe
       ? await supabase.from("recipes").update(row).eq("id", recipe.id)

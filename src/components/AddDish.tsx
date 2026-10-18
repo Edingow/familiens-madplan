@@ -62,7 +62,7 @@ export function AddDish({ data, userId, initialUrl, fill, onClose, onSaved }: Pr
 
   async function saveFill() {
     const items = recipe!.items;
-    const base = { items, servings_base: servings, kcal_per_serving: recipe!.kcal_per_serving };
+    const base = { items, servings_base: servings, kcal_per_serving: recipe!.kcal_per_serving, nutrition: recipe!.nutrition ?? null };
     const recipeExtra = recipe!.instructions ? { instructions: recipe!.instructions } : {};
     if (fill!.kind === "recipe") {
       const r = fill!.recipe;
@@ -114,6 +114,7 @@ export function AddDish({ data, userId, initialUrl, fill, onClose, onSaved }: Pr
         family_id: data.family!.id, title: t, url: url.trim() || null, image: recipe?.image ?? null,
         note: note.trim() || null, servings_base: servings, items: recipe?.items ?? [], created_by: userId,
         suggested: !isParent, kcal_per_serving: recipe?.kcal_per_serving ?? null, instructions: recipe?.instructions ?? null,
+        nutrition: recipe?.nutrition ?? null,
       }).select("*").single();
       if (error) throw error;
       if (isParent && dest === "planned") { await planRecipe(row as Recipe, userId, { status: "planned", date: day, servings }); onSaved("planned"); }

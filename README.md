@@ -6,7 +6,7 @@ Madplan, afstemning og fælles indkøbsliste for hele familien. Kører som app p
 - Konti for alle i familien. Forældre har fuld adgang. Børn kan foreslå retter, stemme og krydse af på listen.
 - Familiens kogebog under **Opskrifter**: gem opskrifter fra et link, indsat tekst eller et foto af en kogebog, og læg dem på madplanen eller til afstemning igen og igen.
 - Egne opskrifter med ingredienser og fremgangsmåde, og mulighed for at rette alle opskrifter.
-- Kalorieskøn pr. person på hver opskrift.
+- Kalorier, protein, fedt, kulhydrat og fibre pr. person, regnet ud fra Frida. Når en ingrediens ikke findes, bruges Claudes skøn for kalorier.
 - AI-vurdering af ugens madplan ud fra Fødevarestyrelsens kostråd, når den sendes til afstemning.
 - Lister med faste varer, der kan lægges på indkøbslisten med ét tryk, efter man har fravalgt det, man ikke mangler.
 - Idéer uden opskrift kan lægges direkte på madplanen.
@@ -37,7 +37,7 @@ npm install
 
 ### 2. Opret databasen i Supabase
 1. Opret en gratis konto på https://supabase.com og tryk **New project**. Vælg region **Frankfurt (eu-central-1)**.
-2. Gå til **SQL Editor** → **New query**, indsæt hele indholdet af `supabase/schema.sql` og tryk **Run**. Har du en ældre database, så kør i stedet de nummererede filer (`002_…` til `009_…`), du ikke har kørt endnu.
+2. Gå til **SQL Editor** → **New query**, indsæt hele indholdet af `supabase/schema.sql` og tryk **Run**. Har du en ældre database, så kør i stedet de nummererede filer (`002_…` til `010_…`), du ikke har kørt endnu.
 3. Gå til **Authentication** → **Sign In / Providers** → **Email**. Slå **Confirm email** fra, hvis I vil kunne logge ind med det samme uden bekræftelsesmail.
 4. Gå til **Project Settings** → **API** og kopiér **Project URL** og **anon public key**. Dem skal du bruge i trin 4.
 
@@ -97,3 +97,7 @@ Den delte genvej sender linket med POST og JSON-feltet `url` til den personlige 
 ## Driftsudgifter
 - Supabase og Vercel: gratis på jeres forbrug.
 - Claude API: få øre pr. opskrift eller scanning. Modellen kan skiftes med variablen `CLAUDE_MODEL`.
+
+## Kilder
+Næringsdata: © Fødevaredata (frida.fooddata.dk), version 5.5, november 2025. DTU Fødevareinstituttet. https://doi.org/10.11583/DTU.29500682
+Data er hentet fra Frida_5.5_Dataset.xlsx og ligger i `api/_lib/frida-data.ts`.
