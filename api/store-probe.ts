@@ -78,7 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (which === "fetch") {
     const url = String(req.query.url || ""), post = req.query.post ? String(req.query.post) : undefined;
     const hdr: Record<string, string> = { "content-type": "application/json" };
-    if (req.query.algolia) { hdr["x-algolia-application-id"] = "F9VBJLR1BK"; hdr["x-algolia-api-key"] = String(req.query.algolia); }
+    if (req.query.ak) { hdr["x-algolia-application-id"] = "F9VBJLR1BK"; hdr["x-algolia-api-key"] = String(req.query.ak); }
     const s = await get(url, { method: post ? "POST" : "GET", body: post, headers: hdr });
     const grep = req.query.grep ? new RegExp(`.{0,150}${String(req.query.grep)}.{0,250}`, "g") : null;
     if (req.query.format === "hit") {
