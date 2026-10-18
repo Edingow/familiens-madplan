@@ -3,6 +3,9 @@
 const API = "https://api.anthropic.com/v1/messages";
 const MODEL = process.env.CLAUDE_MODEL || "claude-haiku-5-5";
 
+/** Fejl, hvis tekst er sikker og nyttig at vise i appen. */
+export class UserFacingError extends Error {}
+
 export type ImageInput = { mediaType: string; base64: string };
 
 export async function claudeStructured<T>(opts: {
@@ -14,7 +17,7 @@ export async function claudeStructured<T>(opts: {
   maxTokens?: number;
 }): Promise<T> {
   const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error("ANTHROPIC_API_KEY mangler");
+  if (!key) throw new UserFacingError("ANTHROPIC_API_KEY mangler i Vercel.");
   const content: unknown[] = (opts.images || []).map((img) => ({
     type: "image",
     source: { type: "base64", media_type: img.mediaType, data: img.base64 },
@@ -33,7 +36,18 @@ export async function claudeStructured<T>(opts: {
       messages: [{ role: "user", content }],
     }),
   });
-  if (!res.ok) throw new Error(`Claude API ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  if (!res.ok) {
+    const raw = (await res.text()).slice(0, 500);
+    console.error("Claude API", res.status, raw);
+    let detail = "";
+    try { detail = JSON.parse(raw)?.error?.message ?? ""; } catch { /* ikke JSON */ }
+    let msg = `Claude svarede med fejl ${res.status}${detail ? `: ${detail}` : "."}`;
+    if (res.status === 401) msg = "Anthropic-nøglen virker ikke. Tjek ANTHROPIC_API_KEY i Vercel.";
+    else if (/credit balance/i.test(raw)) msg = "Der er ingen kredit tilbage på Anthropic-kontoen.";
+    else if (res.status === 404) msg = `Claude-modellen ${MODEL} blev ikke fundet.`;
+    else if (res.status === 429 || res.status === 529) msg = "Claude har travlt lige nu. Prøv igen om lidt.";
+    throw new UserFacingError(msg);
+  }
   const data = await res.json();
   const block = (data.content || []).find((b: any) => b.type === "tool_use");
   if (!block) throw new Error("Claude gav intet struktureret svar");

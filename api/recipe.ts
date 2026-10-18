@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { claudeStructured, RECIPE_SCHEMA, RECIPE_SYSTEM } from "./_lib/claude.js";
+import { claudeStructured, UserFacingError, RECIPE_SCHEMA, RECIPE_SYSTEM } from "./_lib/claude.js";
 import { extractJsonLdRecipe, metaContent, pageText } from "./_lib/html.js";
 import { BROWSER_UA, fail, readImage, requireUser } from "./_lib/http.js";
 import { asCategory, type ParsedRecipe } from "../src/lib/types.js";
@@ -99,6 +99,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(200).json(out);
   } catch (e) {
     console.error(e);
-    fail(res, 500, "Opskriften kunne ikke læses lige nu. Prøv igen om lidt.");
+    fail(res, 500, e instanceof UserFacingError ? e.message : "Opskriften kunne ikke læses lige nu. Prøv igen om lidt.");
   }
 }
