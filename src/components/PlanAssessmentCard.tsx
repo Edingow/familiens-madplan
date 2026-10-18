@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { assessPlan, decidePoint, plannedIds } from "../lib/assess";
 import { errorText } from "../lib/supabase";
 import type { FamilyData } from "../lib/useFamily";
@@ -9,6 +9,12 @@ export function PlanAssessmentCard({ data, onChanged }: { data: FamilyData; onCh
   const a = data.family?.plan_assessment;
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // "Luk vurdering" huskes på denne telefon, indtil der kommer en ny vurdering.
+  const hideKey = `vurdering-skjult:${data.family?.plan_assessed_at ?? ""}`;
+  const readHidden = () => { try { return localStorage.getItem(hideKey) === "1"; } catch { return false; } };
+  const [hidden, setHidden] = useState(readHidden);
+  useEffect(() => { setHidden(readHidden()); }, [hideKey]);
+  const setHide = (h: boolean) => { setHidden(h); try { h ? localStorage.setItem(hideKey, "1") : localStorage.removeItem(hideKey); } catch { /* ignorer */ } };
   const hasPlan = data.dishes.some((d) => d.status === "planned");
   if (!hasPlan || (!a && !isParent)) return null;
 
@@ -33,11 +39,23 @@ export function PlanAssessmentCard({ data, onChanged }: { data: FamilyData; onCh
   }
 
   const pill = a.rating === "god" ? "pill" : a.rating === "middel" ? "pill warn" : "pill bad";
+  const label = a.rating === "god" ? "God" : a.rating === "middel" ? "Middel" : "Mindre god";
+  const open = a.points.filter((p) => p.kind === "minus" && !p.status).length;
+  if (hidden) {
+    return (
+      <button className="card" style={{ marginTop: 16, width: "100%", textAlign: "left", cursor: "pointer" }} onClick={() => setHide(false)}>
+        <span className="row" style={{ justifyContent: "space-between", width: "100%" }}>
+          <span><b>Vurdering af ugen</b>{open && isParent ? <span className="muted small"> · {open} forslag venter</span> : null}</span>
+          <span className="row" style={{ gap: 8 }}><span className={pill}>{label}</span><span className="muted small">Vis</span></span>
+        </span>
+      </button>
+    );
+  }
   return (
     <div className="card" style={{ marginTop: 16 }}>
       <div className="row" style={{ justifyContent: "space-between" }}>
         <b>Vurdering af ugen</b>
-        <span className={pill}>{a.rating === "god" ? "God" : a.rating === "middel" ? "Middel" : "Mindre god"}</span>
+        <span className={pill}>{label}</span>
       </div>
       <div className="small">{a.summary}</div>
       <ul className="small" style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "grid", gap: 4 }}>
@@ -63,7 +81,10 @@ export function PlanAssessmentCard({ data, onChanged }: { data: FamilyData; onCh
       </ul>
       <div className="muted small">Et skøn fra Claude ud fra kostrådene og retternes ingredienser.</div>
       {stale && <div className="small"><b>Madplanen er ændret siden vurderingen.</b></div>}
-      {isParent && <div className="row"><button className="link" style={{ padding: 0 }} disabled={busy} onClick={run}>{busy ? "Vurderer…" : "Vurdér igen"}</button></div>}
+      <div className="row">
+        {isParent && <button className="link" style={{ padding: 0 }} disabled={busy} onClick={run}>{busy ? "Vurderer…" : "Vurdér igen"}</button>}
+        <button className="link" style={{ padding: 0 }} onClick={() => setHide(true)}>Luk vurdering</button>
+      </div>
       {err && <p className="status err">{err}</p>}
     </div>
   );

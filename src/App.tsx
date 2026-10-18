@@ -108,7 +108,7 @@ function Main({ userId, sharedUrl, clearShared }: { userId: string; sharedUrl?: 
           initialUrl={fill ? undefined : sharedUrl}
           fill={fill ?? undefined}
           onClose={() => { setAdding(false); setFill(null); clearShared(); }}
-          onSaved={(where) => { setAdding(false); setFill(null); clearShared(); fam.reloadAll(); if (!fill) setTab(where === "planned" ? "plan" : "recipes"); }}
+          onSaved={(where) => { setAdding(false); setFill(null); clearShared(); fam.reloadAll(); if (!fill && tab !== "recipes") setTab(where === "planned" ? "plan" : "recipes"); }}
         />
       )}
     </>

@@ -76,6 +76,7 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo, onEdit }
   const [servings, setServings] = useState<number | null>(r.servings_base);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [plannedMsg, setPlannedMsg] = useState("");
 
   const onPlan = data.dishes.filter((d) => d.recipe_id === r.id && d.status === "planned");
   const author = data.members.find((m) => m.user_id === r.created_by)?.display_name;
@@ -149,7 +150,7 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo, onEdit }
             <button className="btn" disabled={busy} onClick={() => run(async () => {
               await planRecipe(r, userId, { status: "planned", date: day, servings });
               if (r.suggested) await supabase.from("recipes").update({ suggested: false }).eq("id", r.id);
-            }, () => goTo("plan"))}>Sæt på madplanen</button>
+            }, () => setPlannedMsg(`Lagt på madplanen${day ? ` ${dayLabel(day).toLowerCase()}` : ""}.`))}>Sæt på madplanen</button>
           </div>
         </div>
       )}
@@ -164,6 +165,7 @@ function RecipeCard({ recipe: r, data, userId, onChanged, onFill, goTo, onEdit }
       )}
 
       {err && <p className="status err">{err}</p>}
+      {plannedMsg && panel === "none" && <p className="status" style={{ color: "var(--green)" }}>{plannedMsg}</p>}
 
       {canEdit && panel !== "delete" && (
         <div className="row end">
