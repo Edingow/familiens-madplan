@@ -66,6 +66,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     out.bilka = { home: home.status, scripts: scripts.length, values: [...new Set(vals)], tests, hitCount: hits.length };
   }
+  if (which === "bilka-api") {
+    const home = await get("https://www.bilkatogo.dk/");
+    const scripts = [...home.text.matchAll(/<script[^>]+src="([^"]+\.js)"/g)].map((m) => new URL(m[1], "https://www.bilkatogo.dk/").toString());
+    const found = new Set<string>();
+    for (const s of scripts.slice(0, 30)) {
+      const js = await get(s);
+      for (const m of js.text.matchAll(/["'`]((?:https?:\/\/[a-z0-9.-]+)?\/api\/[A-Za-z0-9_\/.${}-]{3,80})["'`]/g)) found.add(m[1]);
+      for (const m of js.text.matchAll(/["'`](https:\/\/[a-z0-9.-]*(?:salling|bilka)[a-z0-9.-]*\/[^"'`\s]{0,60})["'`]/g)) found.add(m[1]);
+    }
+    res.setHeader("content-type", "text/plain; charset=utf-8");
+    return res.status(200).send([...found].slice(0, 120).join("\n"));
+  }
   if (which === "algolia") {
     const key = String(req.query.key || ""), index = String(req.query.index || "prod_BILKATOGO_PRODUCTS");
     const s = await get(`https://F9VBJLR1BK-dsn.algolia.net/1/indexes/${index}/query`, {
