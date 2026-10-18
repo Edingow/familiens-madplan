@@ -22,7 +22,7 @@ const shape = (o: any, depth = 0): any => {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (!process.env.PUSH_SECRET || req.query.secret !== process.env.PUSH_SECRET) return res.status(401).json({ error: "nej" });
+  if (!process.env.PUSH_SECRET || req.query.s !== process.env.PUSH_SECRET) return res.status(401).json({ error: "nej" });
   const q = String(req.query.q || "letmælk");
   const which = String(req.query.store || "all");
   const out: Record<string, unknown> = {};
@@ -83,7 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const s = await get(`https://F9VBJLR1BK-dsn.algolia.net/1/indexes/${index}/query`, {
       method: "POST",
       headers: { "x-algolia-application-id": "F9VBJLR1BK", "x-algolia-api-key": key, "content-type": "application/json" },
-      body: JSON.stringify({ params: `query=${encodeURIComponent(q)}&hitsPerPage=2&attributesToHighlight=%5B%5D&attributesToSnippet=%5B%5D&attributesToRetrieve=${encodeURIComponent(String(req.query.attrs || '["*"]'))}` }),
+      body: JSON.stringify({ params: `query=${encodeURIComponent(q)}&hitsPerPage=2&attributesToHighlight=%5B%5D&attributesToSnippet=%5B%5D&attributesToRetrieve=${encodeURIComponent((req.query.attrs === 'lite' ? '["*","-storeData","-searchHierachy","-newSearchHierachy"]' : String(req.query.attrs || '["*"]')))}` }),
     });
     if (req.query.format === "hit") {
       const h = s.json?.hits?.[0];
