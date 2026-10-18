@@ -71,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const s = await get(`https://F9VBJLR1BK-dsn.algolia.net/1/indexes/${index}/query`, {
       method: "POST",
       headers: { "x-algolia-application-id": "F9VBJLR1BK", "x-algolia-api-key": key, "content-type": "application/json" },
-      body: JSON.stringify({ params: `query=${encodeURIComponent(q)}&hitsPerPage=3` }),
+      body: JSON.stringify({ params: `query=${encodeURIComponent(q)}&hitsPerPage=2&attributesToHighlight=%5B%5D&attributesToSnippet=%5B%5D` }),
     });
     out.algolia = { status: s.status, body: shape(s.json) ?? s.text.slice(0, 500) };
   }
