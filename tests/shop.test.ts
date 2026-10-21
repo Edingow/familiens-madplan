@@ -101,3 +101,25 @@ describe("butikkernes svar", () => {
     expect(p.url).toContain("/venue/meny-valby-toften/arla-letmaelk-frisk-1-lt-itemid-1e64");
   });
 });
+
+describe("læg i kurv", async () => {
+  const { parseCartCode, default: cartScript } = await import("../api/cart-script");
+  const { cartCode } = await import("../src/components/PriceCompare");
+  const pick = (id: string, packs: number) => ({ line: { product: prod({ id, store: "nemlig" }), packs, total: 1 } });
+  it("laver og læser koden fra udklipsholderen", () => {
+    const code = cartCode("nemlig", [pick("701025", 2), pick("5027572", 1), pick("701025", 1)]);
+    expect(code).toBe("MADPLAN:nemlig:701025x3,5027572x1");
+    expect(parseCartCode(code)).toEqual({ store: "nemlig", items: [{ id: "701025", qty: 3 }, { id: "5027572", qty: 1 }] });
+    expect(parseCartCode("noget andet")).toBeNull();
+    expect(parseCartCode('MADPLAN:nemlig:1x1");alert(1)//')).toBeNull();
+  });
+  it("leverer gyldigt script", () => {
+    for (const d of ["MADPLAN:nemlig:701025x2", "", "MADPLAN:bilka:1x1"]) {
+      let body = "";
+      const res: any = { setHeader() {}, status() { return res; }, send(b: string) { body = b; } };
+      cartScript({ query: { d } } as any, res);
+      expect(() => new Function("completion", body)).not.toThrow();
+      expect(body).toContain("completion(");
+    }
+  });
+});

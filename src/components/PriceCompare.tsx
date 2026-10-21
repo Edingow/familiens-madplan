@@ -173,6 +173,7 @@ function Checklist({ title, groups, missing, result, onBack }: {
   const toggle = (k: string) => setInBasket((s) => { const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n; });
   const total = groups.reduce((s, g) => s + g.picks.reduce((t, p) => t + p.line.total, 0), 0);
   const single = groups.length === 1 ? groups[0].store : null;
+  const [cartFor, setCartFor] = useState<{ store: StoreId; picks: { need: Need; line: Line }[] } | null>(null);
 
   // For varer, butikken ikke har: billigste alternativ i en anden butik.
   const alt = (n: Need) => {
@@ -197,6 +198,9 @@ function Checklist({ title, groups, missing, result, onBack }: {
               <b>{store.name}</b>
               <a className="btn small ghost" href={store.home} target="_blank" rel="noreferrer">Åbn {store.name}</a>
             </div>
+            {CART_STORES.includes(g.store) && (
+              <button className="btn" onClick={() => setCartFor({ store: g.store, picks: g.picks })}>Læg alle i kurven hos {store.name}</button>
+            )}
             <ul className="items">
               {g.picks.map(({ need, line }) => {
                 const k = `${g.store}|${need.key}`;
@@ -225,6 +229,7 @@ function Checklist({ title, groups, missing, result, onBack }: {
           </div>
         );
       })}
+      {cartFor && <CartHelp store={cartFor.store} picks={cartFor.picks} onClose={() => setCartFor(null)} />}
       {missing.length > 0 && (
         <div className="card">
           <b className="small">{single ? `Findes ikke hos ${storeName(single)}` : "Blev ikke fundet"}</b>
@@ -240,6 +245,56 @@ function Checklist({ title, groups, missing, result, onBack }: {
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Butikker, hvor genvejen "Læg i kurv" kan fylde kurven. */
+const CART_STORES: StoreId[] = ["nemlig"];
+/** Delingslink til genvejen. Tom, indtil genvejen er delt fra iCloud. */
+const CART_SHORTCUT_URL = "";
+
+/** Koden, genvejen læser fra udklipsholderen: "MADPLAN:nemlig:701025x2,5027572x1". */
+export function cartCode(store: StoreId, picks: { line: Line }[]): string {
+  const merged = new Map<string, number>();
+  for (const p of picks) merged.set(p.line.product.id, Math.min(20, (merged.get(p.line.product.id) ?? 0) + p.line.packs));
+  return `MADPLAN:${store}:` + [...merged].map(([id, q]) => `${id}x${q}`).join(",");
+}
+
+function copyText(text: string): boolean {
+  try { navigator.clipboard?.writeText(text); return true; } catch { /* prøv den gamle måde */ }
+  try {
+    const t = document.createElement("textarea");
+    t.value = text; t.setAttribute("readonly", ""); t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.appendChild(t); t.select(); const ok = document.execCommand("copy"); t.remove(); return ok;
+  } catch { return false; }
+}
+
+/** Pop-up: kopiér varerne, åbn butikken i Safari, og kør genvejen fra Del-menuen. */
+function CartHelp({ store, picks, onClose }: { store: StoreId; picks: { line: Line }[]; onClose: () => void }) {
+  const info = STORES.find((s) => s.id === store)!;
+  const code = cartCode(store, picks);
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="sheet" style={{ zIndex: 30, alignItems: "center" }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="panel" style={{ borderRadius: 18, margin: 16, width: "calc(100% - 32px)" }}>
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <h2>Læg i kurven hos {info.name}</h2>
+          <button className="link" onClick={onClose}>Luk</button>
+        </div>
+        <ol className="small" style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 8 }}>
+          <li>Tryk på knappen nedenfor. {picks.length} varer kopieres, og {info.name} åbner i Safari. Log ind, hvis du ikke allerede er det.</li>
+          <li>Tryk på <b>Del</b> nederst i Safari (firkanten med pilen op).</li>
+          <li>Vælg genvejen <b>Læg i kurv</b>. Varerne lægges i kurven, og siden genindlæses.</li>
+        </ol>
+        <a className="btn" href={info.home} target="_blank" rel="noreferrer" style={{ textAlign: "center" }}
+          onClick={() => setCopied(copyText(code))}>Kopiér varerne og åbn {info.name}</a>
+        {copied && <p className="status" style={{ margin: 0 }}>Varerne er kopieret.</p>}
+        <p className="muted small" style={{ margin: 0 }}>
+          Åbner {info.name} i et lille vindue inde i appen, så tryk på kompasset eller "Åbn i Safari" først.
+          {CART_SHORTCUT_URL ? <> Mangler du genvejen? <a href={CART_SHORTCUT_URL} target="_blank" rel="noreferrer">Hent den her</a>.</> : null}
+        </p>
+      </div>
     </div>
   );
 }
