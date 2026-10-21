@@ -252,7 +252,7 @@ function Checklist({ title, groups, missing, result, onBack }: {
 /** Butikker, hvor genvejen "Læg i kurv" kan fylde kurven. */
 const CART_STORES: StoreId[] = ["nemlig"];
 /** Delingslink til genvejen. Tom, indtil genvejen er delt fra iCloud. */
-const CART_SHORTCUT_URL = "";
+const CART_SHORTCUT_URL = "https://www.icloud.com/shortcuts/fc96dae3192444628e47a14c62d17be4";
 
 /** Koden, genvejen læser fra udklipsholderen: "MADPLAN:nemlig:701025x2,5027572x1". */
 export function cartCode(store: StoreId, picks: { line: Line }[]): string {
@@ -292,8 +292,15 @@ function CartHelp({ store, picks, onClose }: { store: StoreId; picks: { line: Li
         {copied && <p className="status" style={{ margin: 0 }}>Varerne er kopieret.</p>}
         <p className="muted small" style={{ margin: 0 }}>
           Åbner {info.name} i et lille vindue inde i appen, så tryk på kompasset eller "Åbn i Safari" først.
-          {CART_SHORTCUT_URL ? <> Mangler du genvejen? <a href={CART_SHORTCUT_URL} target="_blank" rel="noreferrer">Hent den her</a>.</> : null}
         </p>
+        <details className="small">
+          <summary style={{ cursor: "pointer" }}><b>Første gang på denne iPhone</b></summary>
+          <ol style={{ margin: "8px 0 0", paddingLeft: 20, display: "grid", gap: 6 }}>
+            <li>Gå til Indstillinger → Apps → Genveje → Avanceret, og slå <b>Tillad afvikling af instrukser</b> til.</li>
+            <li><a href={CART_SHORTCUT_URL} target="_blank" rel="noreferrer">Hent genvejen Læg i kurv</a>, og tryk <b>Tilføj genvej</b>.</li>
+            <li>Første gang genvejen kører, spørger iPhone om lov. Svar <b>Tillad altid</b>.</li>
+          </ol>
+        </details>
       </div>
     </div>
   );
